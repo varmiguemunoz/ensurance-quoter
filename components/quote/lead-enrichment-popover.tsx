@@ -160,7 +160,6 @@ export function LeadEnrichmentPopover({
   const handleSendToChat = useCallback(() => {
     if (!result || !onSendToChat) return
     onSendToChat(buildChatPayload(result))
-    setDialogOpen(false)
   }, [result, onSendToChat])
 
   const hasInput = name.trim() || email.trim() || phone.trim()
@@ -183,10 +182,15 @@ export function LeadEnrichmentPopover({
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="flex items-center gap-1 rounded-sm px-2 py-1 text-[10px] font-bold text-[#1773cf] transition-colors hover:bg-[#eff6ff]"
+            onClick={result ? (e) => { e.preventDefault(); setDialogOpen(true) } : undefined}
+            className={`flex items-center gap-1 rounded-sm px-2 py-1 text-[10px] font-bold transition-colors ${
+              result
+                ? "bg-[#dbeafe] text-[#1773cf] hover:bg-[#bfdbfe]"
+                : "text-[#1773cf] hover:bg-[#eff6ff]"
+            }`}
           >
             <Search className="h-3 w-3" />
-            Enrich
+            {result ? "View Lead" : "Enrich"}
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-[320px] p-0" align="end" sideOffset={8}>
