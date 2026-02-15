@@ -17,3 +17,20 @@ export type {
   TermLength,
   TobaccoStatus,
 } from "./quote"
+
+export type {
+  EnrichmentAutoFillData,
+  EnrichmentCertification,
+  EnrichmentEducation,
+  EnrichmentEmailRecord,
+  EnrichmentExperience,
+  EnrichmentJobHistory,
+  EnrichmentLanguage,
+  EnrichmentPhone,
+  EnrichmentProfile,
+  EnrichmentResponse,
+  EnrichmentResult,
+  EnrichmentStreetAddress,
+  ProactiveInsight,
+  ProactiveInsightsResponse,
+} from "./ai"

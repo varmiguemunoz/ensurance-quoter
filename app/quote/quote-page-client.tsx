@@ -11,7 +11,7 @@ import {
   ComparisonSheet,
 } from "@/components/quote/carrier-comparison"
 import { AiAssistantPanel } from "@/components/quote/ai-assistant-panel"
-import type { QuoteRequest, QuoteResponse, CarrierQuote } from "@/lib/types"
+import type { QuoteRequest, QuoteResponse, CarrierQuote, EnrichmentAutoFillData } from "@/lib/types"
 
 const COVERAGE_STEPS = [
   100000, 150000, 200000, 250000, 300000, 400000, 500000, 750000,
@@ -98,6 +98,18 @@ export function QuotePageClient() {
     setCoverageAmount(1000000)
     setTermLength(20)
     setLastRequest(null)
+  }, [])
+
+  const handleAutoFill = useCallback((data: EnrichmentAutoFillData) => {
+    setLastRequest((prev) => {
+      if (!prev) return null
+      return {
+        ...prev,
+        ...(data.age != null ? { age: data.age } : {}),
+        ...(data.gender ? { gender: data.gender } : {}),
+        ...(data.state ? { state: data.state } : {}),
+      }
+    })
   }, [])
 
   const handleViewDetails = useCallback((quote: CarrierQuote) => {
@@ -293,6 +305,9 @@ export function QuotePageClient() {
         <AiAssistantPanel
           isCollapsed={!isAssistantOpen}
           onToggle={() => setIsAssistantOpen((prev) => !prev)}
+          intakeData={lastRequest}
+          quoteResponse={quoteResponse}
+          onAutoFill={handleAutoFill}
         />
       </div>
 
