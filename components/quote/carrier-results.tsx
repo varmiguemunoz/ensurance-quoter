@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { RefreshCw, Filter, ChevronRight, Star } from "lucide-react"
+import { RefreshCw, Filter, ChevronRight, ChevronDown, Star } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import type { CarrierQuote } from "@/lib/types"
 
 type SortField = "matchScore" | "monthlyPremium" | "annualPremium" | "amBest"
@@ -237,6 +238,7 @@ export function CarrierResults({
   onToggleSelection,
 }: CarrierResultsProps) {
   const [sortField, setSortField] = useState<SortField>("matchScore")
+  const [othersOpen, setOthersOpen] = useState(true)
 
   const eligibleQuotes = useMemo(() => {
     const filtered = quotes.filter((q) => q.isEligible)
@@ -319,32 +321,43 @@ export function CarrierResults({
         </div>
       )}
 
-      {/* All Carriers */}
+      {/* Other Carriers — collapsible */}
       {allCarriers.length > 0 && (
-        <div>
-          <div className="mb-3 flex items-center gap-2">
-            <h4 className="text-[11px] font-bold uppercase tracking-[0.5px] text-[#475569]">
-              All Carriers
-            </h4>
-            <span className="text-[11px] text-[#94a3b8]">
-              {allCarriers.length} additional{" "}
-              {allCarriers.length === 1 ? "carrier" : "carriers"}
-            </span>
-          </div>
-          <div className="overflow-hidden rounded-sm border border-[#e2e8f0]">
-            <ColumnHeaders />
-            {allCarriers.map((quote) => (
-              <CarrierRow
-                key={quote.carrier.id}
-                quote={quote}
-                isSelected={selectedCarrierIds.has(quote.carrier.id)}
-                onToggleSelection={onToggleSelection}
-                onViewDetails={onViewDetails}
-                compact
-              />
-            ))}
-          </div>
-        </div>
+        <Collapsible open={othersOpen} onOpenChange={setOthersOpen} className="mt-4">
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex w-full items-center gap-3 py-3 text-[12px] text-[#64748b] transition-colors hover:text-[#1773cf]"
+            >
+              <div className="h-px flex-1 bg-[#e2e8f0]" />
+              <span className="flex items-center gap-1.5 font-bold">
+                <ChevronDown
+                  className={`h-3.5 w-3.5 transition-transform ${othersOpen ? "rotate-180" : ""}`}
+                />
+                {othersOpen
+                  ? "Hide other carriers"
+                  : `Show ${allCarriers.length} more carrier${allCarriers.length === 1 ? "" : "s"}`}
+              </span>
+              <div className="h-px flex-1 bg-[#e2e8f0]" />
+            </button>
+          </CollapsibleTrigger>
+
+          <CollapsibleContent>
+            <div className="mt-2 overflow-hidden rounded-sm border border-[#e2e8f0]">
+              <ColumnHeaders />
+              {allCarriers.map((quote) => (
+                <CarrierRow
+                  key={quote.carrier.id}
+                  quote={quote}
+                  isSelected={selectedCarrierIds.has(quote.carrier.id)}
+                  onToggleSelection={onToggleSelection}
+                  onViewDetails={onViewDetails}
+                  compact
+                />
+              ))}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       )}
     </div>
   )

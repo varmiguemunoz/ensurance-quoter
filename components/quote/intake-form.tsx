@@ -101,7 +101,7 @@ export function IntakeForm({ onSubmit, onClear, isLoading = false }: IntakeFormP
       age: 45,
       gender: "Male",
       state: "California",
-      coverageAmount: 1000000,
+      coverageAmount: 250000,
       termLength: "20",
       tobaccoStatus: "non-smoker",
       medicalConditions: [],
