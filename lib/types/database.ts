@@ -1,6 +1,21 @@
 /* ------------------------------------------------------------------ */
 /*  Supabase Database Types                                            */
-/*  Generated from migration: create_lead_management_schema            */
+/*  Auto-generated via: supabase gen types typescript                   */
+/*  Re-export generated types + stricter domain aliases                 */
+/* ------------------------------------------------------------------ */
+
+export type {
+  Database,
+  Json,
+  Tables,
+  TablesInsert,
+  TablesUpdate,
+} from "./database.generated"
+
+export type { Database as default } from "./database.generated"
+
+/* ------------------------------------------------------------------ */
+/*  Stricter domain aliases (preserve check-constraint semantics)      */
 /* ------------------------------------------------------------------ */
 
 export type LeadSource = "csv" | "ringba" | "manual" | "api"
@@ -10,7 +25,7 @@ export type CallDirection = "inbound" | "outbound"
 export type CallProvider = "telnyx" | "ringba"
 
 /* ------------------------------------------------------------------ */
-/*  Row types (what you get back from a SELECT)                        */
+/*  Row types — stricter than generated (preserves check constraints)  */
 /* ------------------------------------------------------------------ */
 
 export interface LeadRow {
@@ -24,8 +39,8 @@ export interface LeadRow {
   age: number | null
   gender: "Male" | "Female" | null
   tobacco_status: "non-smoker" | "smoker" | null
-  medical_conditions: string[]
-  dui_history: boolean
+  medical_conditions: string[] | null
+  dui_history: boolean | null
   years_since_last_dui: number | null
   coverage_amount: number | null
   term_length: number | null
@@ -64,7 +79,7 @@ export interface CallLogRow {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Insert types (what you pass to an INSERT)                          */
+/*  Insert types                                                       */
 /* ------------------------------------------------------------------ */
 
 export interface LeadInsert {
@@ -78,8 +93,8 @@ export interface LeadInsert {
   age?: number | null
   gender?: "Male" | "Female" | null
   tobacco_status?: "non-smoker" | "smoker" | null
-  medical_conditions?: string[]
-  dui_history?: boolean
+  medical_conditions?: string[] | null
+  dui_history?: boolean | null
   years_since_last_dui?: number | null
   coverage_amount?: number | null
   term_length?: number | null
@@ -114,7 +129,7 @@ export interface CallLogInsert {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Update types (what you pass to an UPDATE — all fields optional)    */
+/*  Update types                                                       */
 /* ------------------------------------------------------------------ */
 
 export type LeadUpdate = Partial<Omit<LeadInsert, "id">>
@@ -124,34 +139,3 @@ export type EnrichmentUpdate = Partial<Omit<EnrichmentInsert, "id">>
 export type QuoteUpdate = Partial<Omit<QuoteInsert, "id">>
 
 export type CallLogUpdate = Partial<Omit<CallLogInsert, "id">>
-
-/* ------------------------------------------------------------------ */
-/*  Database schema type (for createClient<Database>)                  */
-/* ------------------------------------------------------------------ */
-
-export interface Database {
-  public: {
-    Tables: {
-      leads: {
-        Row: LeadRow
-        Insert: LeadInsert
-        Update: LeadUpdate
-      }
-      enrichments: {
-        Row: EnrichmentRow
-        Insert: EnrichmentInsert
-        Update: EnrichmentUpdate
-      }
-      quotes: {
-        Row: QuoteRow
-        Insert: QuoteInsert
-        Update: QuoteUpdate
-      }
-      call_logs: {
-        Row: CallLogRow
-        Insert: CallLogInsert
-        Update: CallLogUpdate
-      }
-    }
-  }
-}

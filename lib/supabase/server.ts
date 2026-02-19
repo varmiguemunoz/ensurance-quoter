@@ -1,5 +1,5 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
-import type { Database } from "@/lib/types/database"
+import type { Database } from "@/lib/types/database.generated"
 
 /**
  * Server-side Supabase client using the service role key.

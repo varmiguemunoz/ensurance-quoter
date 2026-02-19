@@ -53,3 +53,5 @@ export type {
   QuoteRow,
   QuoteUpdate,
 } from "./database"
+
+export type { Lead, LeadQuoteSnapshot } from "./lead"
