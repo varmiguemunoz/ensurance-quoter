@@ -34,3 +34,22 @@ export type {
   ProactiveInsight,
   ProactiveInsightsResponse,
 } from "./ai"
+
+export type {
+  CallDirection,
+  CallLogInsert,
+  CallLogRow,
+  CallLogUpdate,
+  CallProvider,
+  Database,
+  EnrichmentInsert,
+  EnrichmentRow,
+  EnrichmentUpdate,
+  LeadInsert,
+  LeadRow,
+  LeadSource,
+  LeadUpdate,
+  QuoteInsert,
+  QuoteRow,
+  QuoteUpdate,
+} from "./database"
