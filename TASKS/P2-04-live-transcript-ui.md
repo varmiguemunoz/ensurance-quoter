@@ -1,9 +1,9 @@
 # Task: P2-04-live-transcript-ui
 
 ## Status
-- [ ] Pending
-- [ ] In Progress
-- [ ] Verified
+- [x] Pending
+- [x] In Progress
+- [x] Verified
 - [ ] Complete
 
 ## Pillars

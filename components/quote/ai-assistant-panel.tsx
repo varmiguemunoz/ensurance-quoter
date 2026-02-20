@@ -4,9 +4,6 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport, type UIMessage } from "ai"
 import {
-  AlertTriangle,
-  Info,
-  Lightbulb,
   Loader2,
   MessageSquare,
   Send,
@@ -16,6 +13,10 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { LeadEnrichmentPopover } from "@/components/quote/lead-enrichment-popover"
 import { useLeadStore } from "@/lib/store/lead-store"
+import { useCallStore } from "@/lib/store/call-store"
+import { INSIGHT_ICONS, INSIGHT_COLORS } from "@/lib/constants/insight-styles"
+import { CallModeHeader } from "@/components/calling/call-mode-header"
+import { TranscriptView } from "@/components/calling/transcript-view"
 import type {
   ProactiveInsight,
   EnrichmentResult,
@@ -25,24 +26,14 @@ interface AiAssistantPanelProps {
   onExpand: () => void
 }
 
-const INSIGHT_ICONS: Record<ProactiveInsight["type"], React.ComponentType<{ className?: string }>> = {
-  warning: AlertTriangle,
-  tip: Lightbulb,
-  info: Info,
-}
-
-const INSIGHT_COLORS: Record<ProactiveInsight["type"], { border: string; bg: string; icon: string }> = {
-  warning: { border: "border-l-amber-400", bg: "bg-amber-50", icon: "text-amber-500" },
-  tip: { border: "border-l-emerald-400", bg: "bg-emerald-50", icon: "text-emerald-500" },
-  info: { border: "border-l-blue-400", bg: "bg-blue-50", icon: "text-blue-500" },
-}
-
 function getMessageText(message: UIMessage): string {
   return message.parts
     .filter((part): part is { type: "text"; text: string } => part.type === "text")
     .map((part) => part.text)
     .join("")
 }
+
+const CALL_ACTIVE_STATES = new Set(["connecting", "ringing", "active", "held"])
 
 export function AiAssistantPanel({
   onExpand,
@@ -51,13 +42,33 @@ export function AiAssistantPanel({
   const quoteResponse = useLeadStore((s) => s.quoteResponse)
   const applyAutoFill = useLeadStore((s) => s.applyAutoFill)
   const setActiveLeadEnrichment = useLeadStore((s) => s.setActiveLeadEnrichment)
+  const callState = useCallStore((s) => s.callState)
+
   const [insights, setInsights] = useState<ProactiveInsight[]>([])
   const [insightsLoading, setInsightsLoading] = useState(false)
   const [insightsEnabled, setInsightsEnabled] = useState(true)
   const [dismissedInsightIds, setDismissedInsightIds] = useState<Set<string>>(new Set())
   const [inputValue, setInputValue] = useState("")
+  const [showTranscript, setShowTranscript] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Track call state transitions for transcript view persistence
+  const prevCallStateRef = useRef(callState)
+  useEffect(() => {
+    const prev = prevCallStateRef.current
+    prevCallStateRef.current = callState
+
+    // Call just became active → switch to transcript view
+    if (CALL_ACTIVE_STATES.has(callState) && !CALL_ACTIVE_STATES.has(prev)) {
+      setShowTranscript(true)
+    }
+  }, [callState])
+
+  const isCallActive = CALL_ACTIVE_STATES.has(callState)
+  const isPostCall =
+    !isCallActive && callState !== "error" && showTranscript
+  const isCallMode = isCallActive || callState === "ending" || isPostCall
 
   const transport = useMemo(
     () =>
@@ -77,14 +88,16 @@ export function AiAssistantPanel({
 
   const isBusy = status === "submitted" || status === "streaming"
 
-  // Auto-scroll on new messages
+  // Auto-scroll on new messages (chat mode only)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+    if (!isCallMode) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
+  }, [messages, isCallMode])
 
   // Proactive insights — debounced fetch when intake data changes
   useEffect(() => {
-    if (!insightsEnabled || !intakeData) return
+    if (!insightsEnabled || !intakeData || isCallMode) return
 
     if (debounceRef.current) {
       clearTimeout(debounceRef.current)
@@ -119,7 +132,7 @@ export function AiAssistantPanel({
         clearTimeout(debounceRef.current)
       }
     }
-  }, [intakeData, quoteResponse, insightsEnabled])
+  }, [intakeData, quoteResponse, insightsEnabled, isCallMode])
 
   const handleDismissInsight = useCallback((id: string) => {
     setDismissedInsightIds((prev) => new Set([...prev, id]))
@@ -172,7 +185,31 @@ export function AiAssistantPanel({
     [inputValue, isBusy, sendMessage],
   )
 
+  const handleReturnToChat = useCallback(() => {
+    setShowTranscript(false)
+  }, [])
+
   const visibleInsights = insights.filter((i) => !dismissedInsightIds.has(i.id))
+
+  /* ---------------------------------------------------------------- */
+  /*  Call Mode — live transcript + coaching hints                     */
+  /* ---------------------------------------------------------------- */
+
+  if (isCallMode) {
+    return (
+      <div className="flex h-full flex-col overflow-hidden bg-white">
+        <CallModeHeader />
+        <TranscriptView
+          isPostCall={isPostCall}
+          onReturnToChat={handleReturnToChat}
+        />
+      </div>
+    )
+  }
+
+  /* ---------------------------------------------------------------- */
+  /*  Chat Mode — normal AI assistant                                  */
+  /* ---------------------------------------------------------------- */
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-white">
