@@ -81,8 +81,8 @@ DEEPGRAM_API_KEY=xxx            # From Deepgram console
 │                   PCM Chunks                             │
 │                         │                                │
 │  ┌──────────────────────▼────────────────────────────┐  │
-│  │              WebSocket Client                      │  │
-│  │  (sends audio, receives transcripts)               │  │
+│  │         SSE + POST Client                         │  │
+│  │  (POSTs audio, receives transcripts via SSE)      │  │
 │  └──────────────────────┬────────────────────────────┘  │
 │                         │                                │
 │  ┌──────────────────────▼────────────────────────────┐  │
@@ -108,7 +108,9 @@ DEEPGRAM_API_KEY=xxx            # From Deepgram console
                     │   token       │
                     │               │
                     │ /api/         │──▶ Deepgram Streaming
-                    │   transcribe  │    API (WebSocket)
+                    │   transcribe  │    API (SSE out + POST in)
+                    │   transcribe/ │
+                    │   audio       │
                     │               │
                     │ /api/         │──▶ OpenAI GPT-4o-mini
                     │   coaching    │    (carrier coaching)
@@ -139,17 +141,31 @@ Deepgram $200 credits = ~430 hours of calls before billing starts.
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| Next.js doesn't support WebSocket API routes | High | Use SSE for transcript output + POST for audio input. Or use `next-ws` package. |
+| Next.js doesn't support WebSocket API routes | High | **DECIDED**: SSE for transcript output (`GET /api/transcribe`) + POST for audio input (`/api/transcribe/audio`). Most Next.js-native approach. |
 | Browser can't capture remote call audio | High | Mix local mic + remote stream via Web Audio API. Fallback: Telnyx call recording + post-call download. |
 | ScriptProcessorNode deprecated | Low | Still widely supported. Migrate to AudioWorklet in future if needed. |
 | Deepgram diarization accuracy | Medium | Agent is always speaker 0 (local mic). If diarization fails, default to timestamp-based attribution. |
 | WebSocket disconnects during call | Medium | Buffer audio chunks (max 5s), reconnect with exponential backoff, replay buffer. |
 
+## Architecture Decisions (from validation audit)
+
+| # | Decision | Rationale |
+|---|----------|-----------|
+| 1 | **SSE + POST** for Deepgram proxy (not WebSocket) | Next.js App Router doesn't support WS upgrades. SSE out + POST in is the most native approach. Tiny latency is negligible for transcript display. |
+| 2 | **Reuse `CallDirection`** from `database.ts` | Already exported as `"inbound" \| "outbound"`. Don't redefine in `call.ts`. |
+| 3 | **Call logs stay separate** from Lead type | No `callLogs` field on Lead. Call-store holds active call data. P2-06 badge does separate count query by lead_id. |
+| 4 | **CallNotificationHandler in root layout** | Mounts in `app/layout.tsx` so call state works across all routes (leads, quote, etc.). |
+| 5 | **ActiveCallBar inside LeadDetailClient** | Between breadcrumb header and `<QuoteWorkspace>`. Not in layout. |
+| 6 | **call_logs migration at P2-06** | Add `ai_summary` TEXT + `coaching_hints` JSONB columns via Supabase MCP as first step of P2-06. Not a pre-Phase-2 blocker. |
+| 7 | **Token endpoint returns caller number** | Server reads `TELNYX_CALLER_NUMBER` env var, returns it alongside JWT so client never needs server-only env vars. |
+| 8 | **Reuse ProactiveInsight color/icon maps** for CoachingHint | Same `type` enum values. Share `INSIGHT_ICONS` and `INSIGHT_COLORS` from ai-assistant-panel. |
+| 9 | **Supabase MCP for all migrations** | No local `supabase/migrations/` directory. Use `apply_migration` tool. Regenerate types after. |
+
 ## Files Created (complete list)
 
 ```
 lib/
-├── types/call.ts                    # CallState, TranscriptEntry, CoachingHint, CallLogEntry
+├── types/call.ts                    # CallState, TranscriptEntry, CoachingHint, CallLogEntry (reuses CallDirection from database.ts)
 ├── store/call-store.ts              # Zustand store for all call state
 ├── telnyx/
 │   ├── client.ts                    # TelnyxRTC singleton wrapper
@@ -164,7 +180,8 @@ lib/
 
 app/api/
 ├── telnyx/token/route.ts           # JWT token generation (server-side)
-├── transcribe/route.ts             # WebSocket proxy to Deepgram
+├── transcribe/route.ts             # SSE endpoint for transcript streaming
+├── transcribe/audio/route.ts      # POST endpoint for audio chunks → Deepgram
 ├── coaching/route.ts               # Real-time AI coaching endpoint
 └── call-summary/route.ts           # Post-call AI summary endpoint
 

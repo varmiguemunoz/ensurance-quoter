@@ -55,3 +55,14 @@ export type {
 } from "./database"
 
 export type { Lead, LeadQuoteSnapshot } from "./lead"
+
+export type {
+  CallLogEntry,
+  CallState,
+  CoachingHint,
+  CoachingHintType,
+  TelnyxConfig,
+  TranscriptEntry,
+  TranscriptSpeaker,
+  TranscriptWord,
+} from "./call"

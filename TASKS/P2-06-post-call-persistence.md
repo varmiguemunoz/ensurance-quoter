@@ -90,8 +90,11 @@ When a call ends, save everything — transcript, coaching hints, AI summary, an
 - [ ] "View Full Transcript" button opens Sheet/Dialog with scrollable formatted transcript
 - [ ] Call count visible in lead list (badge or column)
 
+## Prerequisites (run BEFORE coding starts)
+- **Schema migration required**: Add `ai_summary TEXT` and `coaching_hints JSONB` columns to `call_logs` table via Supabase MCP (`apply_migration`). Then regenerate types with `supabase gen types typescript` and update `database.ts` hand-written types (`CallLogRow`, `CallLogInsert`, `CallLogUpdate`) to include the new columns.
+
 ## Steps (high-level)
-1. Create/update database migration if call_logs needs new columns (ai_summary TEXT, coaching_hints JSONB)
+1. **FIRST**: Run Supabase migration to add `ai_summary` (TEXT) and `coaching_hints` (JSONB) columns to `call_logs`. Regenerate `database.generated.ts`. Update hand-written types in `database.ts`.
 2. Create `app/api/call-summary/route.ts` — sends full transcript to GPT-4o-mini with prompt: "Summarize this insurance sales call in exactly 3 sentences. Focus on: what was discussed, any health/lifestyle disclosures, and the outcome."
 3. Create `lib/supabase/calls.ts` — saveCallLog, getCallLogs, getCallLog functions
 4. Create post-call flow in CallNotificationHandler:
@@ -111,7 +114,7 @@ When a call ends, save everything — transcript, coaching hints, AI summary, an
    c. Coaching hints inline
    d. "Copy" button for clipboard
 7. Add call log viewer to lead detail layout
-8. Add call count to lead list (update lead-list.tsx to show calls column/badge)
+8. Add call count to lead list (update lead-list.tsx to show calls column/badge) — fetch call counts via separate query by lead_id, do NOT add callLogs to the Lead type (call logs live in call-store, not on Lead)
 9. Run `bunx tsc --noEmit`
 
 ## On Completion
@@ -120,7 +123,7 @@ When a call ends, save everything — transcript, coaching hints, AI summary, an
 - **Handoff notes:** Phase 2 is complete. Full calling workflow works: lead list → lead detail → call → live transcript + coaching → save → review. Next phases: Ringba inbound (Phase 3), enrichment refinements (Phase 4), Compulife + auth + deployment (Phase 5).
 
 ## Notes
-- The call_logs table from Phase 1 already has most columns. Check if ai_summary and coaching_hints columns exist — add migration if not.
+- **CONFIRMED**: call_logs table needs migration — `ai_summary` and `coaching_hints` columns do NOT exist yet. Run migration via Supabase MCP as the first step of this task.
 - Format coaching_hints as JSONB array: [{ type, text, timestamp, relatedCarriers }]
 - The AI summary prompt should NOT include carrier intelligence context — it's just summarizing the conversation, not making recommendations.
 - Consider adding a "Call Notes" text area in the call log viewer where agents can add their own notes after a call.

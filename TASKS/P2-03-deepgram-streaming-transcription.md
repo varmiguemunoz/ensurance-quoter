@@ -34,9 +34,10 @@ opus
 
 ### 6. Success Criteria
 - [ ] `@deepgram/sdk` installed
-- [ ] `app/api/transcribe/route.ts` — WebSocket-compatible API route that proxies audio to Deepgram (keeps API key server-side)
+- [ ] `app/api/transcribe/route.ts` — **SSE endpoint** that streams transcript JSON to the client + accepts audio via POST (Next.js doesn't support WS upgrades — SSE + POST is the chosen approach). Server-side connects to Deepgram WebSocket, keeps API key server-side.
+- [ ] `app/api/transcribe/audio/route.ts` — **POST endpoint** that accepts PCM audio chunks and forwards them to the active Deepgram WebSocket connection
 - [ ] `lib/telnyx/audio-capture.ts` — captures call audio from MediaStream using AudioContext + ScriptProcessorNode, outputs PCM Int16 chunks at 16kHz mono
-- [ ] `lib/deepgram/stream.ts` — client-side WebSocket manager: connects to proxy, sends audio chunks, receives transcript JSON, parses into TranscriptEntry[]
+- [ ] `lib/deepgram/stream.ts` — client-side manager: opens SSE connection to `/api/transcribe` for transcript output, POSTs audio chunks to `/api/transcribe/audio`, parses transcript JSON into TranscriptEntry[]
 - [ ] TranscriptEntry includes: speaker (0=agent, 1=client), text, timestamp, isFinal (boolean)
 - [ ] Transcript entries flow into call-store.transcript[] in real-time during a call
 - [ ] When call ends (hangup), audio capture stops, WebSocket closes cleanly
@@ -64,7 +65,7 @@ opus
 
 ### 9. Learning
 **Log to LEARNINGS.md if:**
-- [ ] Next.js API routes don't support native WebSocket upgrade — may need custom server or Socket.io
+- [ ] SSE + POST approach has unexpected latency or reliability issues
 - [ ] AudioContext sample rate issues (browser default vs Deepgram 16kHz requirement)
 - [ ] ScriptProcessorNode deprecation — may need AudioWorklet instead
 - [ ] Deepgram diarization accuracy with WebRTC audio quality
@@ -82,7 +83,7 @@ Build the audio capture pipeline and real-time transcription integration. During
 
 **This is the most technically complex task in Phase 2.** It involves:
 1. Browser audio capture (MediaStream → AudioContext → PCM)
-2. WebSocket proxy (client → Next.js → Deepgram)
+2. **SSE + POST proxy** (client POSTs audio chunks → server forwards to Deepgram WS; server streams transcripts back via SSE) — chosen over WebSocket proxy because Next.js App Router doesn't support WS upgrades natively
 3. Deepgram streaming API (audio in, transcript JSON out)
 4. Speaker diarization (distinguish agent from client)
 5. State management (transcript entries into Zustand)
@@ -91,7 +92,7 @@ Build the audio capture pipeline and real-time transcription integration. During
 - [ ] Audio capture starts automatically when call goes active (callState === 'active')
 - [ ] Audio capture stops automatically when call ends
 - [ ] Audio is captured at 16kHz mono (Deepgram recommended format)
-- [ ] WebSocket proxy handles: connection, reconnection (3 retries with exponential backoff), clean shutdown
+- [ ] SSE + POST proxy handles: connection, reconnection (3 retries with exponential backoff), clean shutdown
 - [ ] Deepgram receives audio and returns transcript with `is_final` flag
 - [ ] Interim results (is_final: false) shown differently from final results (is_final: true)
 - [ ] Speaker labels: speaker 0 = agent, speaker 1 = client (mapped from Deepgram diarization)
@@ -109,16 +110,21 @@ Build the audio capture pipeline and real-time transcription integration. During
    d. Convert Float32 audio samples to Int16 PCM
    e. Output PCM chunks via callback
    f. Clean shutdown: disconnect nodes, close context
-4. Create `app/api/transcribe/route.ts`:
-   a. Accept WebSocket upgrade (or use Server-Sent Events if WS not supported)
-   b. Connect to Deepgram Live API with: model=nova-3, language=en, diarize=true, punctuate=true, interim_results=true, utterance_end_ms=1000
-   c. Pipe client audio → Deepgram, pipe Deepgram transcript → client
-   d. Handle Deepgram connection errors, reconnect
-5. Create `lib/deepgram/stream.ts`:
-   a. Client-side WebSocket manager
-   b. Connects to /api/transcribe
-   c. Sends PCM chunks from audio-capture
-   d. Receives transcript JSON, parses into TranscriptEntry
+4. Create `app/api/transcribe/route.ts` (GET — SSE endpoint):
+   a. On GET request, open SSE stream to client
+   b. Server-side: connect to Deepgram Live API WebSocket with: model=nova-3, language=en, diarize=true, punctuate=true, interim_results=true, utterance_end_ms=1000
+   c. Store the Deepgram WS connection keyed by a session ID (returned to client in SSE init event)
+   d. Pipe Deepgram transcript events → SSE stream to client
+   e. Handle Deepgram connection errors, reconnect
+5. Create `app/api/transcribe/audio/route.ts` (POST — audio upload):
+   a. Accept PCM audio chunks + session ID in request
+   b. Forward audio to the active Deepgram WS connection for that session
+   c. Return 200 on success
+6. Create `lib/deepgram/stream.ts`:
+   a. Client-side manager (NOT WebSocket — uses EventSource + fetch)
+   b. Opens EventSource to `/api/transcribe` for receiving transcripts
+   c. POSTs PCM chunks from audio-capture to `/api/transcribe/audio` with session ID
+   d. Parses transcript JSON from SSE events into TranscriptEntry
    e. Dispatches to call-store.addTranscriptEntry()
    f. Handles reconnection, buffering during disconnect
 6. Wire into call lifecycle: in CallNotificationHandler, when call goes active → start audio capture + Deepgram stream. On hangup → stop both.
@@ -142,11 +148,7 @@ Build the audio capture pipeline and real-time transcription integration. During
   - Option B: Web Audio API to mix local mic + remote stream (from `<audio>` element's MediaStream)
   - Option C: Use Telnyx's built-in media forking to send audio to Deepgram directly (advanced)
   - **Start with Option B** (mix streams) and document if it doesn't work.
-- Next.js API routes may not natively support WebSocket upgrade. Alternatives:
-  - Use `next-ws` package
-  - Use Server-Sent Events (SSE) for transcript output + regular POST for audio input
-  - Use a separate lightweight Express/Fastify server on a different port
-  - **Try the native approach first**, fall back to SSE if needed.
+- **DECIDED: SSE + POST approach.** Next.js App Router doesn't support WebSocket upgrades. Use SSE (`GET /api/transcribe`) for streaming transcripts to client + POST (`/api/transcribe/audio`) for sending audio chunks to server. Server maintains the Deepgram WebSocket connection internally. This is the most Next.js-native approach — no extra packages or servers needed. The tiny added latency from POST vs WS is negligible for transcription display.
 - Deepgram Nova-3 at $0.0077/min is very affordable. The $200 free credit = ~430 hours.
 - ScriptProcessorNode is deprecated but still widely supported. AudioWorklet is the replacement but more complex. Use ScriptProcessorNode for MVP, migrate later if needed.
 - Buffer audio during WebSocket reconnection (max 5 seconds), then send buffered chunks when reconnected.

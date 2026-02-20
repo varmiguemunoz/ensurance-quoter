@@ -27,7 +27,7 @@ opus
 ### 4. Knowledge (MUST READ)
 - [x] CLAUDE.md (always)
 - [x] PROJECT_SCOPE.md
-- [ ] Specific files: `lib/store/lead-store.ts` (existing Zustand pattern), `lib/store/ui-store.ts` (existing Zustand pattern), `lib/types/lead.ts` (Lead type with callLogs)
+- [ ] Specific files: `lib/store/lead-store.ts` (existing Zustand pattern), `lib/store/ui-store.ts` (existing Zustand pattern), `lib/types/lead.ts` (Lead type — note: no callLogs field, call logs live separately in call-store), `lib/types/database.ts` (has existing `CallDirection` type to reuse)
 - [ ] External docs: https://www.npmjs.com/package/@telnyx/webrtc, https://developers.telnyx.com/development/webrtc/js-sdk/demo-app
 - [ ] Reference repo: Clone https://github.com/team-telnyx/webrtc-demo-js.git — study `src/atoms/telnyxClient.ts` and `src/components/CallNotificationHandler.tsx` for SDK patterns
 
@@ -36,7 +36,7 @@ opus
 
 ### 6. Success Criteria
 - [ ] `@telnyx/webrtc` installed and importable
-- [ ] `lib/types/call.ts` exists with: CallState, CallDirection, CallLogEntry, TelnyxConfig interfaces
+- [ ] `lib/types/call.ts` exists with: CallState, CallLogEntry, TelnyxConfig interfaces (reuse `CallDirection` from `lib/types/database.ts` — do NOT redefine)
 - [ ] `lib/store/call-store.ts` exists with Zustand store: telnyxClient, activeCall, callState, callDuration, isMuted, isOnHold, transcript[], coachingHints[], error
 - [ ] `app/api/telnyx/token/route.ts` exists — server action that generates JWT token from Telnyx API key + Connection ID (credentials stay server-side)
 - [ ] `lib/telnyx/client.ts` exists — singleton wrapper: initClient(token), connect(), disconnect(), getClient()
@@ -88,7 +88,7 @@ Install the Telnyx WebRTC SDK, create the call state management store, and build
 
 ## Steps (high-level)
 1. Install SDK: `bun add @telnyx/webrtc`
-2. Create `lib/types/call.ts` — CallState, CallDirection, CallLogEntry, TranscriptEntry, CoachingHint, TelnyxConfig
+2. Create `lib/types/call.ts` — CallState, CallLogEntry, TranscriptEntry, CoachingHint, TelnyxConfig (import `CallDirection` from `lib/types/database.ts`, do NOT redefine it)
 3. Create `lib/store/call-store.ts` — Zustand store following existing lead-store pattern
 4. Create `app/api/telnyx/token/route.ts` — POST endpoint that calls Telnyx API to generate JWT
 5. Create `lib/telnyx/client.ts` — singleton TelnyxRTC wrapper with connect/disconnect/getClient

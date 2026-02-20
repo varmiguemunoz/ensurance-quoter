@@ -99,9 +99,9 @@ Build the click-to-call dialer UI and full call controls. When an agent views a 
 3. Create `components/calling/active-call-bar.tsx` — shows during active/ringing/held states, renders timer + controls
 4. Create `components/calling/dtmf-keypad.tsx` — 4x3 grid keypad, sends call.dtmf(digit) on press
 5. Create `components/calling/remote-audio.tsx` — hidden `<audio>` element that attaches to call's remote MediaStream
-6. Add CallNotificationHandler to leads layout (mounts once, listens globally)
-7. Add CallButton to lead detail header
-8. Add ActiveCallBar to lead detail view (conditionally rendered when call active)
+6. Add CallNotificationHandler to **root layout** (`app/layout.tsx`) so it works globally across all routes (leads, quote, etc.) — not in leads layout
+7. Add CallButton to lead detail header (inside `lead-detail-client.tsx` breadcrumb area)
+8. Add ActiveCallBar inside `lead-detail-client.tsx`, between the breadcrumb header and `<QuoteWorkspace>` (conditionally rendered when call active)
 9. Wire call lifecycle: initiateCall() → client.newCall({destinationNumber, callerNumber}) → notification handler → store updates → UI reacts
 10. Add useInterval hook for call timer (updates callDuration every second while call is active)
 11. Test with a real call
@@ -115,6 +115,7 @@ Build the click-to-call dialer UI and full call controls. When an agent views a 
 - Reference `src/components/ActiveCall.tsx` from the Telnyx demo for call control patterns. They use `call.muteAudio()`, `call.hold()`, `call.dtmf(digit)`, `call.hangup()`.
 - Reference `src/components/CallNotificationHandler.tsx` for how to listen to `telnyx.notification` events and extract call state.
 - The `<audio>` element approach: set `audioRef.current.srcObject = call.remoteStream` when call goes active. Reference `src/components/ActiveCall.tsx` for this pattern.
-- The active call bar should be compact (one horizontal row) — it lives above the three-column layout, not inside a panel.
+- The active call bar should be compact (one horizontal row) — it lives inside `lead-detail-client.tsx` between the breadcrumb header and `<QuoteWorkspace>`, not inside a panel.
+- CallNotificationHandler mounts in the **root layout** (`app/layout.tsx`), not the leads layout, so call state is available on all routes.
 - Consider adding a small "calling..." overlay or animation during the ringing state.
-- callerNumber should come from env or Telnyx config (the purchased Telnyx number), not from the lead record.
+- callerNumber should come from the token endpoint response (server returns it alongside the JWT from TELNYX_CALLER_NUMBER env var), not from the lead record.

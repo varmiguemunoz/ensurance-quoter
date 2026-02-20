@@ -118,3 +118,4 @@ Extend the AI assistant panel with a "call mode" that shows live transcription d
 - Consider a small animation when new coaching hints appear (fade in from right) to draw attention without being distracting.
 - The "call mode" should feel like a natural extension of the panel, not a completely different UI. Keep the same background, scrollbar, padding.
 - Include a "Copy Transcript" button in post-call review mode for agents who want to paste it somewhere.
+- **Reuse existing color/icon maps**: `INSIGHT_ICONS` and `INSIGHT_COLORS` from `ai-assistant-panel.tsx` already map `'warning' | 'tip' | 'info'` to colors and icons. Extract these to a shared location (or import from the panel) for coaching hint cards — same type enum, consistent styling.
