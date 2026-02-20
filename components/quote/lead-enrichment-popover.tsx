@@ -11,7 +11,6 @@ import {
   GraduationCap,
   History,
   Sparkles,
-  Zap,
   Globe,
   Phone,
   Mail,
@@ -37,7 +36,8 @@ import {
 } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import type { EnrichmentResult, EnrichmentResponse, EnrichmentAutoFillData } from "@/lib/types"
+import { toast } from "sonner"
+import type { EnrichmentResult, EnrichmentResponse } from "@/lib/types"
 
 /* ------------------------------------------------------------------ */
 /*  Props & helpers                                                    */
@@ -45,7 +45,13 @@ import type { EnrichmentResult, EnrichmentResponse, EnrichmentAutoFillData } fro
 
 interface LeadEnrichmentPopoverProps {
   onEnrichmentResult: (result: EnrichmentResult) => void
-  onAutoFill?: (data: EnrichmentAutoFillData) => void
+  onAutoFill: (data: {
+    firstName?: string
+    lastName?: string
+    age?: number
+    gender?: "Male" | "Female"
+    state?: string
+  }) => number
   onSendToChat?: (text: string) => void
 }
 
@@ -128,8 +134,25 @@ export function LeadEnrichmentPopover({
         return
       }
 
-      setResult(data.data)
-      onEnrichmentResult(data.data)
+      const enrichment = data.data
+      setResult(enrichment)
+      onEnrichmentResult(enrichment)
+
+      // Auto-apply enrichment fields to intake (respects dirty fields)
+      const filledCount = onAutoFill({
+        firstName: enrichment.firstName ?? undefined,
+        lastName: enrichment.lastName ?? undefined,
+        age: enrichment.age ?? undefined,
+        gender: mapSexToGender(enrichment.sex),
+        state: enrichment.state ?? undefined,
+      })
+
+      if (filledCount > 0) {
+        toast.success(`Lead enriched — ${filledCount} field${filledCount > 1 ? "s" : ""} updated. Review and run quote.`)
+      } else {
+        toast.info("Lead enriched — no new fields to fill")
+      }
+
       setPopoverOpen(false)
       setDialogOpen(true)
     } catch {
@@ -137,7 +160,7 @@ export function LeadEnrichmentPopover({
     } finally {
       setIsLoading(false)
     }
-  }, [name, email, phone, onEnrichmentResult])
+  }, [name, email, phone, onEnrichmentResult, onAutoFill])
 
   const handleReset = useCallback(() => {
     setName("")
@@ -148,32 +171,12 @@ export function LeadEnrichmentPopover({
     setDialogOpen(false)
   }, [])
 
-  const handleAutoFill = useCallback(() => {
-    if (!result || !onAutoFill) return
-    onAutoFill({
-      age: result.age ?? undefined,
-      gender: mapSexToGender(result.sex),
-      state: result.state ?? undefined,
-    })
-  }, [result, onAutoFill])
-
   const handleSendToChat = useCallback(() => {
     if (!result || !onSendToChat) return
     onSendToChat(buildChatPayload(result))
   }, [result, onSendToChat])
 
   const hasInput = name.trim() || email.trim() || phone.trim()
-  const hasAutoFillData = result && (result.age || result.sex || result.state)
-
-  const autoFillSummary = result
-    ? [
-        result.age ? `Age ${result.age}` : null,
-        mapSexToGender(result.sex) ?? null,
-        result.state ?? null,
-      ]
-        .filter(Boolean)
-        .join(", ")
-    : ""
 
   return (
     <>
@@ -278,25 +281,14 @@ export function LeadEnrichmentPopover({
               </div>
 
               <div className="flex shrink-0 gap-2 border-t border-[#e2e8f0] px-6 py-3">
-                {hasAutoFillData && onAutoFill && (
-                  <Button
-                    onClick={handleAutoFill}
-                    size="sm"
-                    className="flex-1 bg-[#1773cf] text-[11px] font-bold hover:bg-[#1565b8]"
-                  >
-                    <Zap className="mr-1.5 h-3 w-3" />
-                    Apply to Intake ({autoFillSummary})
-                  </Button>
-                )}
                 {onSendToChat && (
                   <Button
                     onClick={handleSendToChat}
                     size="sm"
-                    variant="outline"
-                    className="flex-1 text-[11px] font-bold"
+                    className="flex-1 bg-[#1773cf] text-[11px] font-bold hover:bg-[#1565b8]"
                   >
                     <Sparkles className="mr-1.5 h-3 w-3" />
-                    Analyze with AI
+                    Send to AI
                   </Button>
                 )}
                 <Button onClick={handleReset} variant="ghost" size="sm" className="text-[11px]">

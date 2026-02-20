@@ -37,7 +37,7 @@ const leadFieldsSchema = z.object({
   lastName: z.string().max(100).nullable().optional(),
   email: z.string().email().nullable().optional(),
   phone: z.string().max(30).nullable().optional(),
-  state: z.string().max(2).nullable().optional(),
+  state: z.string().max(30).nullable().optional(),
   age: z.number().int().min(0).max(150).nullable().optional(),
   gender: z.enum(["Male", "Female"]).nullable().optional(),
   tobaccoStatus: z.enum(["non-smoker", "smoker"]).nullable().optional(),

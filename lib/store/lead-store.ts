@@ -28,6 +28,7 @@ interface QuoteSessionState {
   coverageAmount: number
   termLength: number
   isQuoteLoading: boolean
+  autoFillVersion: number
 }
 
 interface LeadActions {
@@ -64,7 +65,7 @@ interface QuoteSessionActions {
   setIsQuoteLoading: (loading: boolean) => void
   fetchQuotes: (request: QuoteRequest) => Promise<void>
   clearQuoteSession: () => void
-  applyAutoFill: (data: EnrichmentAutoFillData) => void
+  applyAutoFill: (data: EnrichmentAutoFillData) => number
   switchToLead: (lead: Lead) => void
 }
 
@@ -98,6 +99,7 @@ function createQuoteSessionDefaults(): QuoteSessionState {
     coverageAmount: 1000000,
     termLength: 20,
     isQuoteLoading: false,
+    autoFillVersion: 0,
   }
 }
 
@@ -146,6 +148,7 @@ export const useLeadStore = create<LeadStore>()((set, get) => ({
     const state = get()
     if (!state.activeLead) return
 
+    const leadId = state.activeLead.id
     const updated = { ...state.activeLead, enrichment }
     set({
       activeLead: updated,
@@ -153,7 +156,7 @@ export const useLeadStore = create<LeadStore>()((set, get) => ({
     })
 
     // Persist enrichment in background — surface error if it fails
-    persistEnrichmentAction(state.activeLead.id, enrichment).then((result) => {
+    persistEnrichmentAction(leadId, enrichment).then((result) => {
       if (!result.success) {
         set({ lastSaveError: "Enrichment failed to save — click Save to retry" })
       }
@@ -271,18 +274,70 @@ export const useLeadStore = create<LeadStore>()((set, get) => ({
 
   clearQuoteSession: () => set(createQuoteSessionDefaults()),
 
-  applyAutoFill: (data) =>
-    set((state) => {
-      if (!state.intakeData) return state
-      return {
-        intakeData: {
-          ...state.intakeData,
-          ...(data.age != null ? { age: data.age } : {}),
-          ...(data.gender ? { gender: data.gender } : {}),
-          ...(data.state ? { state: data.state } : {}),
-        },
-      }
-    }),
+  applyAutoFill: (data) => {
+    const state = get()
+    const dirty = state.dirtyFields
+    let filledCount = 0
+
+    // Build lead field updates (skip dirty fields)
+    const leadUpdates: Partial<Lead> = {}
+    if (data.firstName && !dirty.has("firstName")) {
+      leadUpdates.firstName = data.firstName
+      filledCount++
+    }
+    if (data.lastName && !dirty.has("lastName")) {
+      leadUpdates.lastName = data.lastName
+      filledCount++
+    }
+    if (data.age != null && !dirty.has("age")) {
+      leadUpdates.age = data.age
+      filledCount++
+    }
+    if (data.gender && !dirty.has("gender")) {
+      leadUpdates.gender = data.gender
+      filledCount++
+    }
+    if (data.state && !dirty.has("state")) {
+      leadUpdates.state = data.state
+      filledCount++
+    }
+
+    if (filledCount === 0) return 0
+
+    // Update activeLead for persistence
+    const updatedLead = state.activeLead
+      ? { ...state.activeLead, ...leadUpdates }
+      : null
+
+    // Build name for intakeData form field
+    const name = updatedLead
+      ? [updatedLead.firstName, updatedLead.lastName].filter(Boolean).join(" ")
+      : data.firstName && data.lastName
+        ? `${data.firstName} ${data.lastName}`
+        : data.firstName ?? data.lastName ?? undefined
+
+    // Update intakeData if it exists
+    const intakeUpdates: Partial<QuoteRequest> = {}
+    if (name && !dirty.has("name")) intakeUpdates.name = name
+    if (data.age != null && !dirty.has("age")) intakeUpdates.age = data.age
+    if (data.gender && !dirty.has("gender")) intakeUpdates.gender = data.gender
+    if (data.state && !dirty.has("state")) intakeUpdates.state = data.state
+
+    set({
+      ...(updatedLead
+        ? {
+            activeLead: updatedLead,
+            leads: updateLeadInList(state.leads, updatedLead),
+          }
+        : {}),
+      ...(state.intakeData
+        ? { intakeData: { ...state.intakeData, ...intakeUpdates } }
+        : {}),
+      autoFillVersion: state.autoFillVersion + 1,
+    })
+
+    return filledCount
+  },
 
   switchToLead: (lead) =>
     set(() => {

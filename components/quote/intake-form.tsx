@@ -128,8 +128,11 @@ interface IntakeFormProps {
 
 export function IntakeForm({ onSubmit, onClear, isLoading = false }: IntakeFormProps) {
   const activeLead = useLeadStore((s) => s.activeLead)
+  const autoFillVersion = useLeadStore((s) => s.autoFillVersion)
+  const markFieldDirty = useLeadStore((s) => s.markFieldDirty)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastLeadIdRef = useRef<string | null>(null)
+  const lastAutoFillRef = useRef(0)
 
   const form = useForm<IntakeFormValues>({
     resolver: zodResolver(intakeSchema),
@@ -148,6 +151,20 @@ export function IntakeForm({ onSubmit, onClear, isLoading = false }: IntakeFormP
       form.reset(EMPTY_DEFAULTS)
     }
   }, [activeLead]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync form fields when auto-fill is applied (enrichment)
+  useEffect(() => {
+    if (autoFillVersion === lastAutoFillRef.current) return
+    lastAutoFillRef.current = autoFillVersion
+    if (!activeLead) return
+
+    const vals = buildFormValuesFromLead(activeLead)
+    const dirtyFields = useLeadStore.getState().dirtyFields
+    if (vals.name && !dirtyFields.has("name")) form.setValue("name", vals.name)
+    if (vals.age != null && !dirtyFields.has("age")) form.setValue("age", vals.age)
+    if (vals.gender && !dirtyFields.has("gender")) form.setValue("gender", vals.gender)
+    if (vals.state && !dirtyFields.has("state")) form.setValue("state", vals.state)
+  }, [autoFillVersion, activeLead]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFormSubmit = useCallback(
     (values: IntakeFormValues) => {
@@ -240,6 +257,9 @@ export function IntakeForm({ onSubmit, onClear, isLoading = false }: IntakeFormP
                       {...field}
                       onChange={(e) => {
                         field.onChange(e)
+                        markFieldDirty("name")
+                        markFieldDirty("firstName")
+                        markFieldDirty("lastName")
                         debouncedSubmit()
                       }}
                     />
@@ -264,6 +284,7 @@ export function IntakeForm({ onSubmit, onClear, isLoading = false }: IntakeFormP
                           className="border-r border-[#e2e8f0] px-2 py-1 text-[16px] text-[#64748b] hover:bg-[#f1f5f9]"
                           onClick={() => {
                             field.onChange(Math.max(18, field.value - 1))
+                            markFieldDirty("age")
                             debouncedSubmit()
                           }}
                         >
@@ -277,6 +298,7 @@ export function IntakeForm({ onSubmit, onClear, isLoading = false }: IntakeFormP
                           className="border-l border-[#e2e8f0] px-2 py-1 text-[16px] text-[#64748b] hover:bg-[#f1f5f9]"
                           onClick={() => {
                             field.onChange(Math.min(85, field.value + 1))
+                            markFieldDirty("age")
                             debouncedSubmit()
                           }}
                         >
@@ -298,6 +320,7 @@ export function IntakeForm({ onSubmit, onClear, isLoading = false }: IntakeFormP
                     <Select
                       onValueChange={(val) => {
                         field.onChange(val)
+                        markFieldDirty("gender")
                         debouncedSubmit()
                       }}
                       value={field.value}
@@ -328,6 +351,7 @@ export function IntakeForm({ onSubmit, onClear, isLoading = false }: IntakeFormP
                   <Select
                     onValueChange={(val) => {
                       field.onChange(val)
+                      markFieldDirty("state")
                       debouncedSubmit()
                     }}
                     value={field.value}

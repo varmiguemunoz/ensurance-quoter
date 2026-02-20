@@ -9,7 +9,6 @@ import {
   Lightbulb,
   Loader2,
   MessageSquare,
-  PanelRightClose,
   Send,
   Sparkles,
   X,
@@ -23,8 +22,7 @@ import type {
 } from "@/lib/types"
 
 interface AiAssistantPanelProps {
-  isCollapsed: boolean
-  onToggle: () => void
+  onExpand: () => void
 }
 
 const INSIGHT_ICONS: Record<ProactiveInsight["type"], React.ComponentType<{ className?: string }>> = {
@@ -47,12 +45,12 @@ function getMessageText(message: UIMessage): string {
 }
 
 export function AiAssistantPanel({
-  isCollapsed,
-  onToggle,
+  onExpand,
 }: AiAssistantPanelProps) {
   const intakeData = useLeadStore((s) => s.intakeData)
   const quoteResponse = useLeadStore((s) => s.quoteResponse)
   const applyAutoFill = useLeadStore((s) => s.applyAutoFill)
+  const setActiveLeadEnrichment = useLeadStore((s) => s.setActiveLeadEnrichment)
   const [insights, setInsights] = useState<ProactiveInsight[]>([])
   const [insightsLoading, setInsightsLoading] = useState(false)
   const [insightsEnabled, setInsightsEnabled] = useState(true)
@@ -128,11 +126,18 @@ export function AiAssistantPanel({
   }, [])
 
   const handleSendToChat = useCallback((text: string) => {
-    if (isCollapsed) onToggle()
+    onExpand()
     sendMessage({ text })
-  }, [sendMessage, isCollapsed, onToggle])
+  }, [sendMessage, onExpand])
 
   const handleEnrichmentResult = useCallback((result: EnrichmentResult) => {
+    // Persist enrichment on the lead (store + Supabase) — skip if no active lead
+    const hasActiveLead = useLeadStore.getState().activeLead !== null
+    if (hasActiveLead) {
+      setActiveLeadEnrichment(result)
+    }
+
+    // Show enrichment summary as insight card
     const parts: string[] = []
     if (result.fullName) parts.push(`Name: ${result.fullName}`)
     if (result.age) parts.push(`Age: ${result.age}`)
@@ -154,7 +159,7 @@ export function AiAssistantPanel({
         ...prev,
       ])
     }
-  }, [])
+  }, [setActiveLeadEnrichment])
 
   const handleSend = useCallback(
     (e: React.FormEvent) => {
@@ -169,23 +174,8 @@ export function AiAssistantPanel({
 
   const visibleInsights = insights.filter((i) => !dismissedInsightIds.has(i.id))
 
-  if (isCollapsed) {
-    return (
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-10 shrink-0 flex-col items-center gap-2 border-l border-[#e2e8f0] bg-white py-4 text-[#64748b] transition-colors hover:bg-[#f9fafb] hover:text-[#1773cf]"
-      >
-        <MessageSquare className="h-4 w-4" />
-        <span className="text-[9px] font-bold uppercase tracking-[0.5px] [writing-mode:vertical-lr]">
-          AI Assistant
-        </span>
-      </button>
-    )
-  }
-
   return (
-    <aside className="flex w-[340px] shrink-0 flex-col overflow-hidden border-l border-[#e2e8f0] bg-white">
+    <div className="flex h-full flex-col overflow-hidden bg-white">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#e2e8f0] px-4 py-3">
         <div className="flex items-center gap-2">
@@ -214,13 +204,6 @@ export function AiAssistantPanel({
             title={insightsEnabled ? "Disable auto-insights" : "Enable auto-insights"}
           >
             {insightsEnabled ? "AUTO" : "OFF"}
-          </button>
-          <button
-            type="button"
-            onClick={onToggle}
-            className="ml-1 text-[#94a3b8] transition-colors hover:text-[#64748b]"
-          >
-            <PanelRightClose className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -352,6 +335,6 @@ export function AiAssistantPanel({
           </button>
         </form>
       </div>
-    </aside>
+    </div>
   )
 }

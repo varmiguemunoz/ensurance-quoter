@@ -228,6 +228,8 @@ export interface EnrichmentResult {
 /* ------------------------------------------------------------------ */
 
 export interface EnrichmentAutoFillData {
+  firstName?: string
+  lastName?: string
   age?: number
   gender?: "Male" | "Female"
   state?: string
