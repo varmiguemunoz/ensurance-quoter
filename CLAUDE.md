@@ -20,6 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Toast**: Sonner 2.0
 - **AI**: Vercel AI SDK + OpenAI GPT-4o-mini (streaming chat + proactive insights)
 - **Enrichment**: People Data Labs API (80+ field person enrichment)
+- **Transcription**: Deepgram Nova-3 (@deepgram/sdk, live streaming via SSE+POST proxy)
 - **Runtime**: Bun (package manager)
 
 ### Planned (Phase 1 — not yet installed)
@@ -72,7 +73,10 @@ npx shadcn@latest add <component>    # Add new component
 │   │   ├── quote/route.ts        # POST — eligibility + pricing + scoring
 │   │   ├── chat/route.ts         # POST — streaming AI chat (GPT-4o-mini)
 │   │   ├── chat/proactive/route.ts # POST — proactive insight cards
-│   │   └── enrichment/route.ts   # POST — PDL person enrichment
+│   │   ├── enrichment/route.ts   # POST — PDL person enrichment
+│   │   └── transcribe/
+│   │       ├── stream/route.ts  # GET — SSE stream (Deepgram live transcription)
+│   │       └── audio/route.ts   # POST — forward base64 PCM to Deepgram
 │   ├── layout.tsx                # Root layout (Inter + Geist Mono)
 │   └── page.tsx                  # Marketing landing page
 │
@@ -109,6 +113,8 @@ npx shadcn@latest add <component>    # Add new component
 │   │   └── eligibility.ts        # PERMANENT — state/medical/DUI checks
 │   ├── ai/
 │   │   └── system-prompt.ts      # buildSystemPrompt() for AI chat
+│   ├── deepgram/
+│   │   └── sessions.ts           # Deepgram WS session manager (Map-based, max 10)
 │   └── utils.ts                  # cn() helper
 │
 ├── hooks/
@@ -204,6 +210,7 @@ Proprietary 0-99 scale. Factors: AM Best rating, e-sign capability, vape-friendl
 # .env.local (currently configured)
 OPENAI_API_KEY=                      # GPT-4o-mini for AI chat + proactive insights
 PEOPLEDATALABS_API_KEY=              # PDL person enrichment
+DEEPGRAM_API_KEY=                    # Deepgram Nova-3 live transcription ($0.0077/min)
 
 # Phase 1 — add when Supabase is set up
 # NEXT_PUBLIC_SUPABASE_URL=          # Supabase project URL
