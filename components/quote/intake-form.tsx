@@ -24,6 +24,8 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { MedicalHistorySection } from "@/components/quote/medical-history-section"
+import { useLeadStore } from "@/lib/store/lead-store"
+import type { Lead } from "@/lib/types/lead"
 import type { QuoteRequest } from "@/lib/types"
 
 const US_STATES = [
@@ -85,6 +87,39 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
+const EMPTY_DEFAULTS: IntakeFormValues = {
+  name: "",
+  age: 45,
+  gender: "Male",
+  state: "",
+  coverageAmount: 250000,
+  termLength: "20",
+  tobaccoStatus: "non-smoker",
+  medicalConditions: [],
+  medications: "",
+  duiHistory: false,
+  yearsSinceLastDui: undefined,
+}
+
+function buildFormValuesFromLead(lead: Lead): IntakeFormValues {
+  const name = [lead.firstName, lead.lastName].filter(Boolean).join(" ")
+  return {
+    name: name || EMPTY_DEFAULTS.name,
+    age: lead.age ?? EMPTY_DEFAULTS.age,
+    gender: lead.gender ?? EMPTY_DEFAULTS.gender,
+    state: lead.state ?? EMPTY_DEFAULTS.state,
+    coverageAmount: lead.coverageAmount ?? EMPTY_DEFAULTS.coverageAmount,
+    termLength: lead.termLength
+      ? (String(lead.termLength) as IntakeFormValues["termLength"])
+      : EMPTY_DEFAULTS.termLength,
+    tobaccoStatus: lead.tobaccoStatus ?? EMPTY_DEFAULTS.tobaccoStatus,
+    medicalConditions: lead.medicalConditions ?? [],
+    medications: "",
+    duiHistory: lead.duiHistory,
+    yearsSinceLastDui: lead.yearsSinceLastDui ?? undefined,
+  }
+}
+
 interface IntakeFormProps {
   onSubmit: (data: QuoteRequest) => void
   onClear?: () => void
@@ -92,24 +127,27 @@ interface IntakeFormProps {
 }
 
 export function IntakeForm({ onSubmit, onClear, isLoading = false }: IntakeFormProps) {
+  const activeLead = useLeadStore((s) => s.activeLead)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastLeadIdRef = useRef<string | null>(null)
 
   const form = useForm<IntakeFormValues>({
     resolver: zodResolver(intakeSchema),
-    defaultValues: {
-      name: "Johnathan Doe",
-      age: 45,
-      gender: "Male",
-      state: "California",
-      coverageAmount: 250000,
-      termLength: "20",
-      tobaccoStatus: "non-smoker",
-      medicalConditions: [],
-      medications: "",
-      duiHistory: false,
-      yearsSinceLastDui: undefined,
-    },
+    defaultValues: activeLead ? buildFormValuesFromLead(activeLead) : EMPTY_DEFAULTS,
   })
+
+  // Reset form when activeLead changes
+  useEffect(() => {
+    const newId = activeLead?.id ?? null
+    if (newId === lastLeadIdRef.current) return
+    lastLeadIdRef.current = newId
+
+    if (activeLead) {
+      form.reset(buildFormValuesFromLead(activeLead))
+    } else {
+      form.reset(EMPTY_DEFAULTS)
+    }
+  }, [activeLead]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFormSubmit = useCallback(
     (values: IntakeFormValues) => {
@@ -151,8 +189,12 @@ export function IntakeForm({ onSubmit, onClear, isLoading = false }: IntakeFormP
     }
   }, [])
 
+  // Auto-submit on mount only if form has meaningful data (e.g., from a lead)
   useEffect(() => {
-    form.handleSubmit(handleFormSubmit)()
+    const values = form.getValues()
+    if (values.name && values.state) {
+      form.handleSubmit(handleFormSubmit)()
+    }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const watchedAge = form.watch("age")
@@ -258,7 +300,7 @@ export function IntakeForm({ onSubmit, onClear, isLoading = false }: IntakeFormP
                         field.onChange(val)
                         debouncedSubmit()
                       }}
-                      defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger className="mt-1.5 rounded-sm border-[#e2e8f0] bg-[#f9fafb] text-[14px] font-medium text-[#0f172a]">
@@ -288,7 +330,7 @@ export function IntakeForm({ onSubmit, onClear, isLoading = false }: IntakeFormP
                       field.onChange(val)
                       debouncedSubmit()
                     }}
-                    defaultValue={field.value}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger className="mt-1.5 rounded-sm border-[#e2e8f0] bg-[#f9fafb] text-[14px] font-medium text-[#0f172a]">

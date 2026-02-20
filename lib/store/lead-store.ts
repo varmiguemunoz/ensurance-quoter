@@ -58,6 +58,7 @@ interface QuoteSessionActions {
   fetchQuotes: (request: QuoteRequest) => Promise<void>
   clearQuoteSession: () => void
   applyAutoFill: (data: EnrichmentAutoFillData) => void
+  switchToLead: (lead: Lead) => void
 }
 
 export type LeadStore = LeadState & QuoteSessionState & LeadActions & QuoteSessionActions
@@ -212,6 +213,23 @@ export const useLeadStore = create<LeadStore>()((set, get) => ({
           ...(data.gender ? { gender: data.gender } : {}),
           ...(data.state ? { state: data.state } : {}),
         },
+      }
+    }),
+
+  switchToLead: (lead) =>
+    set(() => {
+      const lastSnapshot = lead.quoteHistory.at(-1)
+      return {
+        activeLead: lead,
+        dirtyFields: new Set<string>(),
+        ...createQuoteSessionDefaults(),
+        ...(lastSnapshot
+          ? {
+              quoteResponse: lastSnapshot.response,
+              coverageAmount: lastSnapshot.request.coverageAmount,
+              termLength: lastSnapshot.request.termLength,
+            }
+          : {}),
       }
     }),
 }))
