@@ -162,6 +162,22 @@ export async function insertLead(
   return rowToLead(row)
 }
 
+export async function insertLeadsBatch(
+  leads: Array<Partial<Lead> & { agentId: string }>
+): Promise<Lead[]> {
+  const supabase = createServerClient()
+  const inserts = leads.map(leadToInsert)
+
+  const { data: rows, error } = await supabase
+    .from("leads")
+    .insert(inserts)
+    .select()
+
+  if (error) throw new Error(`Failed to batch insert leads: ${error.message}`)
+
+  return (rows ?? []).map((row) => rowToLead(row))
+}
+
 export async function updateLead(
   id: string,
   fields: Partial<Lead>

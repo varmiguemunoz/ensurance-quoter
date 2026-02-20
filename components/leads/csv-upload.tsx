@@ -23,12 +23,11 @@ import {
   type ImportResult,
 } from "@/lib/utils/csv-parser"
 import { useLeadStore } from "@/lib/store/lead-store"
-import type { Lead } from "@/lib/types/lead"
+import { createLeadsBatch } from "@/lib/actions/leads"
+import { DEV_AGENT_ID } from "@/lib/constants"
 import { toast } from "sonner"
 
 type Step = "upload" | "map" | "preview" | "done"
-
-const DEV_AGENT_ID = "00000000-0000-0000-0000-000000000001"
 
 export function CSVUpload() {
   const [open, setOpen] = useState(false)
@@ -124,37 +123,36 @@ export function CSVUpload() {
 
     setIsImporting(true)
 
-    const now = new Date().toISOString()
-    const leads: Lead[] = importResult.leads.map((mapped) => ({
-      id: crypto.randomUUID(),
-      agentId: DEV_AGENT_ID,
-      firstName: mapped.firstName,
-      lastName: mapped.lastName,
-      email: mapped.email,
-      phone: mapped.phone,
-      state: mapped.state,
-      age: mapped.age,
-      gender: mapped.gender,
-      tobaccoStatus: mapped.tobaccoStatus,
-      medicalConditions: [],
-      duiHistory: false,
-      yearsSinceLastDui: null,
-      coverageAmount: null,
-      termLength: null,
-      source: "csv" as const,
-      rawCsvData: mapped.rawCsvData,
-      enrichment: null,
-      quoteHistory: [],
-      createdAt: now,
-      updatedAt: now,
-    }))
+    try {
+      const leadsData = importResult.leads.map((mapped) => ({
+        agentId: DEV_AGENT_ID,
+        firstName: mapped.firstName,
+        lastName: mapped.lastName,
+        email: mapped.email,
+        phone: mapped.phone,
+        state: mapped.state,
+        age: mapped.age,
+        gender: mapped.gender,
+        tobaccoStatus: mapped.tobaccoStatus,
+        source: "csv" as const,
+        rawCsvData: mapped.rawCsvData,
+      }))
 
-    addLeads(leads)
-    setImportedCount(leads.length)
-    setStep("done")
-    setIsImporting(false)
+      const result = await createLeadsBatch(leadsData)
 
-    toast.success(`${leads.length} leads imported`)
+      if (result.success && result.data) {
+        addLeads(result.data)
+        setImportedCount(result.data.length)
+        setStep("done")
+        toast.success(`${result.data.length} leads imported`)
+      } else {
+        toast.error(result.error ?? "Failed to import leads")
+      }
+    } catch {
+      toast.error("Network error — please try again")
+    } finally {
+      setIsImporting(false)
+    }
   }
 
   /* ---------------------------------------------------------------- */

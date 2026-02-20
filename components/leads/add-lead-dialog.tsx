@@ -22,6 +22,8 @@ import {
 } from "@/components/ui/select"
 import { Plus } from "lucide-react"
 import { useLeadStore } from "@/lib/store/lead-store"
+import { createLead } from "@/lib/actions/leads"
+import { DEV_AGENT_ID } from "@/lib/constants"
 import type { Lead } from "@/lib/types/lead"
 import { toast } from "sonner"
 
@@ -31,8 +33,6 @@ const US_STATES = [
   "NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN",
   "TX","UT","VT","VA","WA","WV","WI","WY","DC",
 ]
-
-const DEV_AGENT_ID = "00000000-0000-0000-0000-000000000001"
 
 interface FormData {
   firstName: string
@@ -59,41 +59,42 @@ export function AddLeadDialog() {
     setForm({ ...form, [field]: value })
   }
 
-  function handleSubmit() {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  async function handleSubmit() {
     if (!form.firstName.trim() && !form.lastName.trim() && !form.email.trim()) {
       toast.error("Please enter at least a name or email")
       return
     }
 
-    const now = new Date().toISOString()
-    const lead: Lead = {
-      id: crypto.randomUUID(),
-      agentId: DEV_AGENT_ID,
-      firstName: form.firstName.trim() || null,
-      lastName: form.lastName.trim() || null,
-      email: form.email.trim().toLowerCase() || null,
-      phone: form.phone.trim() || null,
-      state: form.state || null,
-      age: null,
-      gender: null,
-      tobaccoStatus: null,
-      medicalConditions: [],
-      duiHistory: false,
-      yearsSinceLastDui: null,
-      coverageAmount: null,
-      termLength: null,
-      source: "manual",
-      rawCsvData: null,
-      enrichment: null,
-      quoteHistory: [],
-      createdAt: now,
-      updatedAt: now,
-    }
+    setIsSubmitting(true)
 
-    addLead(lead)
-    toast.success("Lead added")
-    setForm(EMPTY_FORM)
-    setOpen(false)
+    try {
+      const leadData = {
+        agentId: DEV_AGENT_ID,
+        firstName: form.firstName.trim() || null,
+        lastName: form.lastName.trim() || null,
+        email: form.email.trim().toLowerCase() || null,
+        phone: form.phone.trim() || null,
+        state: form.state || null,
+        source: "manual" as const,
+      }
+
+      const result = await createLead(leadData)
+
+      if (result.success && result.data) {
+        addLead(result.data)
+        toast.success("Lead added")
+        setForm(EMPTY_FORM)
+        setOpen(false)
+      } else {
+        toast.error(result.error ?? "Failed to add lead")
+      }
+    } catch {
+      toast.error("Network error — please try again")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -178,10 +179,12 @@ export function AddLeadDialog() {
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)}>
+          <Button variant="ghost" onClick={() => setOpen(false)} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit}>Add Lead</Button>
+          <Button onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? "Adding..." : "Add Lead"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

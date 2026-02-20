@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import {
   Search,
@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   XCircle,
   Users,
+  Loader2,
+  AlertCircle,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -29,6 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useLeadStore } from "@/lib/store/lead-store"
+import { DEV_AGENT_ID } from "@/lib/constants"
 import { CSVUpload } from "./csv-upload"
 import { AddLeadDialog } from "./add-lead-dialog"
 import type { Lead } from "@/lib/types/lead"
@@ -144,8 +147,16 @@ function SortHeader({
 
 export function LeadList() {
   const leads = useLeadStore((s) => s.leads)
+  const isLoading = useLeadStore((s) => s.isLoading)
+  const lastSaveError = useLeadStore((s) => s.lastSaveError)
   const setActiveLead = useLeadStore((s) => s.setActiveLead)
+  const hydrateLeads = useLeadStore((s) => s.hydrateLeads)
   const router = useRouter()
+
+  // Hydrate leads from Supabase on mount
+  useEffect(() => {
+    void hydrateLeads(DEV_AGENT_ID)
+  }, [hydrateLeads])
 
   const [search, setSearch] = useState("")
   const [sourceFilter, setSourceFilter] = useState<LeadSource | "all">("all")
@@ -211,6 +222,35 @@ export function LeadList() {
       month: "short",
       day: "numeric",
     })
+  }
+
+  /* ── Loading State ────────────────────────────────────────────── */
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 px-4">
+        <Loader2 className="mb-4 h-8 w-8 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Loading leads...</p>
+      </div>
+    )
+  }
+
+  /* ── Error State ─────────────────────────────────────────────── */
+
+  if (lastSaveError && leads.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 px-4">
+        <AlertCircle className="mb-4 h-8 w-8 text-red-500" />
+        <p className="text-sm font-medium text-red-600">{lastSaveError}</p>
+        <button
+          type="button"
+          onClick={() => void hydrateLeads(DEV_AGENT_ID)}
+          className="mt-4 rounded-sm bg-[#1773cf] px-4 py-2 text-[12px] font-bold text-white hover:bg-[#1565b8]"
+        >
+          Retry
+        </button>
+      </div>
+    )
   }
 
   /* ── Empty State ──────────────────────────────────────────────── */
