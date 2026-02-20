@@ -225,7 +225,7 @@ export const useCallStore = create<CallStore>()((set, get) => ({
   },
 
   canDial: () => {
-    const { isClientReady, callState } = get()
-    return isClientReady && callState === "idle"
+    const { callState } = get()
+    return callState === "idle"
   },
 }))

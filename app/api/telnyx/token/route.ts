@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   // Generate JWT from Telnyx API
   try {
     const response = await fetch(
-      `https://api.telnyx.com/v2/telephony_credentials/${connectionId}/token`,
+      `https://api.telnyx.com/v2/telephony_credentials/${encodeURIComponent(connectionId)}/token`,
       {
         method: "POST",
         headers: {
@@ -71,10 +71,9 @@ export async function POST(request: Request) {
       callerNumber: callerNumber ?? null,
       leadId: body.leadId,
     })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error"
+  } catch {
     return NextResponse.json(
-      { error: `Failed to generate token: ${message}` },
+      { error: "Failed to generate call token. Please try again." },
       { status: 500 },
     )
   }

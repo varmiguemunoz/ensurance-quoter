@@ -1,20 +1,20 @@
 "use client"
 
 import { useMemo, useEffect, useState, useCallback, useRef } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ChevronRight, Save, Loader2 } from "lucide-react"
 import { QuoteWorkspace } from "@/components/quote/quote-workspace"
 import { useLeadStore } from "@/lib/store/lead-store"
 import { toast } from "sonner"
 import { UnsavedChangesGuard } from "@/components/navigation/unsaved-changes-guard"
+import { CallButton } from "@/components/calling/call-button"
+import { ActiveCallBar } from "@/components/calling/active-call-bar"
 
 interface LeadDetailClientProps {
   leadId: string
 }
 
 export function LeadDetailClient({ leadId }: LeadDetailClientProps) {
-  const router = useRouter()
   const leads = useLeadStore((s) => s.leads)
   const activeLeadId = useLeadStore((s) => s.activeLead?.id ?? null)
   const dirtyFields = useLeadStore((s) => s.dirtyFields)
@@ -141,6 +141,8 @@ export function LeadDetailClient({ leadId }: LeadDetailClientProps) {
         </div>
 
         <div className="flex items-center gap-3">
+          <CallButton />
+
           <button
             type="button"
             onClick={handleSave}
@@ -162,6 +164,8 @@ export function LeadDetailClient({ leadId }: LeadDetailClientProps) {
           </button>
         </div>
       </header>
+
+      <ActiveCallBar />
 
       <QuoteWorkspace />
     </div>

@@ -1,10 +1,17 @@
 # Task: P2-03-deepgram-streaming-transcription
 
 ## Status
-- [ ] Pending
+- [ ] Pending — **SPLIT into sub-tasks, execute P2-03A → P2-03B → P2-03C**
 - [ ] In Progress
 - [ ] Verified
 - [ ] Complete
+
+## Sub-tasks
+| Task | Scope | File |
+|------|-------|------|
+| **P2-03A** | Audio capture — PCM Int16 @ 16kHz mono from local+remote streams | `P2-03A-audio-capture.md` |
+| **P2-03B** | Server routes — SSE + POST proxy to Deepgram | `P2-03B-server-routes.md` |
+| **P2-03C** | Wire together — client manager, call lifecycle integration | `P2-03C-wire-together.md` |
 
 ## Pillars
 
