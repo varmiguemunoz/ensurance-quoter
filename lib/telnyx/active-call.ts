@@ -56,3 +56,9 @@ export function getRemoteStream(): MediaStream | null {
   const call = activeCall as any
   return call?.remoteStream ?? null
 }
+
+/** Get the local MediaStream (agent's microphone). */
+export function getLocalStream(): MediaStream | null {
+  const call = activeCall as any
+  return call?.localStream ?? null
+}
