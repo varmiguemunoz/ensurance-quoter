@@ -114,7 +114,8 @@ npx shadcn@latest add <component>    # Add new component
 │   ├── ai/
 │   │   └── system-prompt.ts      # buildSystemPrompt() for AI chat
 │   ├── deepgram/
-│   │   └── sessions.ts           # Deepgram WS session manager (Map-based, max 10)
+│   │   ├── sessions.ts           # Deepgram WS session manager (Map-based, max 10)
+│   │   └── stream.ts             # Client-side: SSE + audio POST + call-store dispatch
 │   └── utils.ts                  # cn() helper
 │
 ├── hooks/

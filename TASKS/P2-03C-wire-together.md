@@ -1,9 +1,9 @@
 # Task: P2-03C-wire-together
 
 ## Status
-- [ ] Pending
-- [ ] In Progress
-- [ ] Verified
+- [x] Pending
+- [x] In Progress
+- [x] Verified
 - [ ] Complete
 
 ## Pillars

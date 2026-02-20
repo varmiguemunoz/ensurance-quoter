@@ -5,8 +5,9 @@
 /* ------------------------------------------------------------------ */
 
 import { useCallStore } from "@/lib/store/call-store"
-import { setActiveCall } from "./active-call"
+import { setActiveCall, getLocalStream, getRemoteStream } from "./active-call"
 import type { TelnyxNotification } from "./client"
+import { startTranscription, stopTranscription } from "@/lib/deepgram/stream"
 import { toast } from "sonner"
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -38,6 +39,7 @@ export function handleTelnyxNotification(
 ): void {
   // Handle microphone permission errors
   if (notification.type === "userMediaError") {
+    stopTranscription()
     clearHangupTimeout()
     useCallStore
       .getState()
@@ -88,6 +90,11 @@ export function handleTelnyxNotification(
       } else if (store.callState !== "active") {
         store.setCallActive(callId)
         toast.success("Call connected")
+
+        // Start live transcription once call is active.
+        // TODO(P3): Gate on recording consent — currently assumes agent
+        // plays disclosure prompt before call connects (see compliance.md).
+        startTranscription(getLocalStream(), getRemoteStream())
       }
       break
 
@@ -96,6 +103,7 @@ export function handleTelnyxNotification(
       break
 
     case "hangup":
+      stopTranscription()
       store.setCallEnding()
       toast.info("Call ended")
       clearHangupTimeout()
@@ -108,6 +116,7 @@ export function handleTelnyxNotification(
 
     case "destroy":
     case "purge":
+      stopTranscription()
       clearHangupTimeout()
       store.resetCall()
       setActiveCall(null)
