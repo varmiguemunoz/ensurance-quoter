@@ -1,9 +1,10 @@
 import { create } from "zustand"
 import type { Lead, LeadQuoteSnapshot } from "@/lib/types/lead"
-import type { EnrichmentResult } from "@/lib/types/ai"
+import type { EnrichmentResult, EnrichmentAutoFillData } from "@/lib/types/ai"
+import type { QuoteRequest, QuoteResponse } from "@/lib/types/quote"
 
 /* ------------------------------------------------------------------ */
-/*  LeadStore — domain state for leads                                 */
+/*  LeadStore — domain state for leads + active quote session          */
 /* ------------------------------------------------------------------ */
 
 interface LeadState {
@@ -11,6 +12,15 @@ interface LeadState {
   activeLead: Lead | null
   isLoading: boolean
   dirtyFields: Set<string>
+}
+
+interface QuoteSessionState {
+  intakeData: QuoteRequest | null
+  quoteResponse: QuoteResponse | null
+  selectedCarrierIds: Set<string>
+  coverageAmount: number
+  termLength: number
+  isQuoteLoading: boolean
 }
 
 interface LeadActions {
@@ -37,18 +47,45 @@ interface LeadActions {
   setIsLoading: (loading: boolean) => void
 }
 
-export type LeadStore = LeadState & LeadActions
+interface QuoteSessionActions {
+  setIntakeData: (data: QuoteRequest | null) => void
+  setQuoteResponse: (response: QuoteResponse | null) => void
+  toggleCarrierSelection: (carrierId: string) => void
+  clearCarrierSelection: () => void
+  setCoverageAmount: (amount: number) => void
+  setTermLength: (length: number) => void
+  setIsQuoteLoading: (loading: boolean) => void
+  fetchQuotes: (request: QuoteRequest) => Promise<void>
+  clearQuoteSession: () => void
+  applyAutoFill: (data: EnrichmentAutoFillData) => void
+}
+
+export type LeadStore = LeadState & QuoteSessionState & LeadActions & QuoteSessionActions
+
+function createQuoteSessionDefaults(): QuoteSessionState {
+  return {
+    intakeData: null,
+    quoteResponse: null,
+    selectedCarrierIds: new Set<string>(),
+    coverageAmount: 1000000,
+    termLength: 20,
+    isQuoteLoading: false,
+  }
+}
 
 function updateLeadInList(leads: Lead[], updated: Lead): Lead[] {
   return leads.map((l) => (l.id === updated.id ? updated : l))
 }
 
 export const useLeadStore = create<LeadStore>()((set, get) => ({
-  // State
+  // Lead state
   leads: [],
   activeLead: null,
   isLoading: false,
   dirtyFields: new Set<string>(),
+
+  // Quote session state
+  ...createQuoteSessionDefaults(),
 
   // Lead CRUD
   setLeads: (leads) => set({ leads }),
@@ -115,4 +152,66 @@ export const useLeadStore = create<LeadStore>()((set, get) => ({
 
   // Loading
   setIsLoading: (isLoading) => set({ isLoading }),
+
+  // Quote session actions
+  setIntakeData: (intakeData) => set({ intakeData }),
+
+  setQuoteResponse: (quoteResponse) => set({ quoteResponse }),
+
+  toggleCarrierSelection: (carrierId) =>
+    set((state) => {
+      const next = new Set(state.selectedCarrierIds)
+      if (next.has(carrierId)) {
+        next.delete(carrierId)
+      } else if (next.size < 3) {
+        next.add(carrierId)
+      }
+      return { selectedCarrierIds: next }
+    }),
+
+  clearCarrierSelection: () => set({ selectedCarrierIds: new Set<string>() }),
+
+  setCoverageAmount: (coverageAmount) => set({ coverageAmount }),
+
+  setTermLength: (termLength) => set({ termLength }),
+
+  setIsQuoteLoading: (isQuoteLoading) => set({ isQuoteLoading }),
+
+  fetchQuotes: async (request) => {
+    set({
+      isQuoteLoading: true,
+      intakeData: request,
+      coverageAmount: request.coverageAmount,
+      termLength: request.termLength,
+    })
+    try {
+      const response = await fetch("/api/quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request),
+      })
+      if (!response.ok) throw new Error(`Quote request failed: ${response.status}`)
+      const data: QuoteResponse = await response.json()
+      set({ quoteResponse: data, selectedCarrierIds: new Set<string>() })
+    } catch {
+      // Handled by empty state in UI
+    } finally {
+      set({ isQuoteLoading: false })
+    }
+  },
+
+  clearQuoteSession: () => set(createQuoteSessionDefaults()),
+
+  applyAutoFill: (data) =>
+    set((state) => {
+      if (!state.intakeData) return state
+      return {
+        intakeData: {
+          ...state.intakeData,
+          ...(data.age != null ? { age: data.age } : {}),
+          ...(data.gender ? { gender: data.gender } : {}),
+          ...(data.state ? { state: data.state } : {}),
+        },
+      }
+    }),
 }))

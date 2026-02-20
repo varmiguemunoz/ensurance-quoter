@@ -16,20 +16,15 @@ import {
 } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { LeadEnrichmentPopover } from "@/components/quote/lead-enrichment-popover"
+import { useLeadStore } from "@/lib/store/lead-store"
 import type {
-  QuoteRequest,
-  QuoteResponse,
   ProactiveInsight,
   EnrichmentResult,
-  EnrichmentAutoFillData,
 } from "@/lib/types"
 
 interface AiAssistantPanelProps {
   isCollapsed: boolean
   onToggle: () => void
-  intakeData: QuoteRequest | null
-  quoteResponse: QuoteResponse | null
-  onAutoFill?: (data: EnrichmentAutoFillData) => void
 }
 
 const INSIGHT_ICONS: Record<ProactiveInsight["type"], React.ComponentType<{ className?: string }>> = {
@@ -54,10 +49,10 @@ function getMessageText(message: UIMessage): string {
 export function AiAssistantPanel({
   isCollapsed,
   onToggle,
-  intakeData,
-  quoteResponse,
-  onAutoFill,
 }: AiAssistantPanelProps) {
+  const intakeData = useLeadStore((s) => s.intakeData)
+  const quoteResponse = useLeadStore((s) => s.quoteResponse)
+  const applyAutoFill = useLeadStore((s) => s.applyAutoFill)
   const [insights, setInsights] = useState<ProactiveInsight[]>([])
   const [insightsLoading, setInsightsLoading] = useState(false)
   const [insightsEnabled, setInsightsEnabled] = useState(true)
@@ -205,7 +200,7 @@ export function AiAssistantPanel({
         <div className="flex items-center gap-1">
           <LeadEnrichmentPopover
             onEnrichmentResult={handleEnrichmentResult}
-            onAutoFill={onAutoFill}
+            onAutoFill={applyAutoFill}
             onSendToChat={handleSendToChat}
           />
           <button

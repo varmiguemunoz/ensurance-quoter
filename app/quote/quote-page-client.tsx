@@ -11,7 +11,9 @@ import {
   ComparisonSheet,
 } from "@/components/quote/carrier-comparison"
 import { AiAssistantPanel } from "@/components/quote/ai-assistant-panel"
-import type { QuoteRequest, QuoteResponse, CarrierQuote, EnrichmentAutoFillData } from "@/lib/types"
+import { useLeadStore } from "@/lib/store/lead-store"
+import { useUIStore } from "@/lib/store/ui-store"
+import type { CarrierQuote } from "@/lib/types"
 
 const COVERAGE_STEPS = [
   100000, 150000, 200000, 250000, 300000, 400000, 500000, 750000,
@@ -45,72 +47,26 @@ const NAV_TABS = [
 ] as const
 
 export function QuotePageClient() {
-  const [quoteResponse, setQuoteResponse] = useState<QuoteResponse | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [selectedCarrierIds, setSelectedCarrierIds] = useState<Set<string>>(
-    new Set(),
-  )
+  // Domain state from Zustand
+  const quoteResponse = useLeadStore((s) => s.quoteResponse)
+  const isLoading = useLeadStore((s) => s.isQuoteLoading)
+  const selectedCarrierIds = useLeadStore((s) => s.selectedCarrierIds)
+  const coverageAmount = useLeadStore((s) => s.coverageAmount)
+  const termLength = useLeadStore((s) => s.termLength)
+  const intakeData = useLeadStore((s) => s.intakeData)
+  const fetchQuotes = useLeadStore((s) => s.fetchQuotes)
+  const setCoverageAmount = useLeadStore((s) => s.setCoverageAmount)
+  const setTermLength = useLeadStore((s) => s.setTermLength)
+  const clearQuoteSession = useLeadStore((s) => s.clearQuoteSession)
+
+  // UI state from Zustand
+  const isAssistantOpen = useUIStore((s) => s.rightPanelOpen)
+  const toggleAssistant = useUIStore((s) => s.toggleRightPanel)
+
+  // Local UI state (ephemeral — not domain data)
   const [detailQuote, setDetailQuote] = useState<CarrierQuote | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isComparisonOpen, setIsComparisonOpen] = useState(false)
-  const [coverageAmount, setCoverageAmount] = useState(1000000)
-  const [termLength, setTermLength] = useState<number>(20)
-  const [lastRequest, setLastRequest] = useState<QuoteRequest | null>(null)
-  const [isAssistantOpen, setIsAssistantOpen] = useState(false)
-
-  const fetchQuotes = useCallback(async (request: QuoteRequest) => {
-    setIsLoading(true)
-    setLastRequest(request)
-    setCoverageAmount(request.coverageAmount)
-    setTermLength(request.termLength)
-    try {
-      const response = await fetch("/api/quote", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(request),
-      })
-      if (!response.ok) throw new Error(`Quote request failed: ${response.status}`)
-      const data: QuoteResponse = await response.json()
-      setQuoteResponse(data)
-      setSelectedCarrierIds(new Set())
-    } catch {
-      // Handled by empty state
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  const handleToggleSelection = useCallback((carrierId: string) => {
-    setSelectedCarrierIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(carrierId)) {
-        next.delete(carrierId)
-      } else if (next.size < 3) {
-        next.add(carrierId)
-      }
-      return next
-    })
-  }, [])
-
-  const handleClearQuotes = useCallback(() => {
-    setQuoteResponse(null)
-    setSelectedCarrierIds(new Set())
-    setCoverageAmount(1000000)
-    setTermLength(20)
-    setLastRequest(null)
-  }, [])
-
-  const handleAutoFill = useCallback((data: EnrichmentAutoFillData) => {
-    setLastRequest((prev) => {
-      if (!prev) return null
-      return {
-        ...prev,
-        ...(data.age != null ? { age: data.age } : {}),
-        ...(data.gender ? { gender: data.gender } : {}),
-        ...(data.state ? { state: data.state } : {}),
-      }
-    })
-  }, [])
 
   const handleViewDetails = useCallback((quote: CarrierQuote) => {
     setDetailQuote(quote)
@@ -187,7 +143,7 @@ export function QuotePageClient() {
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar */}
         <aside className="w-[480px] min-w-[480px] shrink-0 border-r border-[#e2e8f0] bg-white shadow-sm">
-          <IntakeForm onSubmit={fetchQuotes} onClear={handleClearQuotes} isLoading={isLoading} />
+          <IntakeForm onSubmit={fetchQuotes} onClear={clearQuoteSession} isLoading={isLoading} />
         </aside>
 
         {/* Center Content */}
@@ -241,8 +197,7 @@ export function QuotePageClient() {
                     value={[coverageToSlider(coverageAmount)]}
                     onValueChange={([val]) => {
                       if (val !== undefined) {
-                        const newAmount = sliderToCoverage(val)
-                        setCoverageAmount(newAmount)
+                        setCoverageAmount(sliderToCoverage(val))
                       }
                     }}
                     className="[&_[data-slot=slider-range]]:bg-[#1773cf] [&_[data-slot=slider-thumb]]:border-[#1773cf] [&_[data-slot=slider-thumb]]:bg-[#1773cf]"
@@ -283,14 +238,7 @@ export function QuotePageClient() {
           {/* Market Comparison */}
           {quoteResponse ? (
             <CarrierResults
-              quotes={quoteResponse.quotes}
-              isLoading={isLoading}
-              onRefresh={() => {
-                if (lastRequest) fetchQuotes(lastRequest)
-              }}
               onViewDetails={handleViewDetails}
-              selectedCarrierIds={selectedCarrierIds}
-              onToggleSelection={handleToggleSelection}
             />
           ) : (
             <div className="flex h-48 items-center justify-center rounded-sm border border-[#e2e8f0] bg-white">
@@ -304,10 +252,7 @@ export function QuotePageClient() {
         {/* Right Panel — AI Assistant */}
         <AiAssistantPanel
           isCollapsed={!isAssistantOpen}
-          onToggle={() => setIsAssistantOpen((prev) => !prev)}
-          intakeData={lastRequest}
-          quoteResponse={quoteResponse}
-          onAutoFill={handleAutoFill}
+          onToggle={toggleAssistant}
         />
       </div>
 
@@ -344,7 +289,7 @@ export function QuotePageClient() {
         quote={detailQuote}
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
-        clientConditions={lastRequest?.medicalConditions}
+        clientConditions={intakeData?.medicalConditions}
       />
 
       <CompareFloatingButton

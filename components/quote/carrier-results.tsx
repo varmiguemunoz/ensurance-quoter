@@ -4,17 +4,15 @@ import { useState, useMemo } from "react"
 import { RefreshCw, Filter, ChevronRight, ChevronDown, Star } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { useLeadStore } from "@/lib/store/lead-store"
 import type { CarrierQuote } from "@/lib/types"
 
 type SortField = "matchScore" | "monthlyPremium" | "annualPremium" | "amBest"
 
+const EMPTY_QUOTES: CarrierQuote[] = []
+
 interface CarrierResultsProps {
-  quotes: CarrierQuote[]
-  isLoading?: boolean
-  onRefresh?: () => void
   onViewDetails?: (quote: CarrierQuote) => void
-  selectedCarrierIds: Set<string>
-  onToggleSelection: (carrierId: string) => void
 }
 
 function formatCurrency(amount: number): string {
@@ -230,13 +228,15 @@ function CarrierRow({
 }
 
 export function CarrierResults({
-  quotes,
-  isLoading = false,
-  onRefresh,
   onViewDetails,
-  selectedCarrierIds,
-  onToggleSelection,
 }: CarrierResultsProps) {
+  const quotes = useLeadStore((s) => s.quoteResponse?.quotes ?? EMPTY_QUOTES)
+  const isLoading = useLeadStore((s) => s.isQuoteLoading)
+  const selectedCarrierIds = useLeadStore((s) => s.selectedCarrierIds)
+  const intakeData = useLeadStore((s) => s.intakeData)
+  const fetchQuotes = useLeadStore((s) => s.fetchQuotes)
+  const toggleCarrierSelection = useLeadStore((s) => s.toggleCarrierSelection)
+
   const [sortField, setSortField] = useState<SortField>("matchScore")
   const [othersOpen, setOthersOpen] = useState(true)
 
@@ -272,7 +272,7 @@ export function CarrierResults({
           <button
             type="button"
             className="flex items-center gap-1 text-[#1773cf] hover:text-[#1566b8]"
-            onClick={onRefresh}
+            onClick={() => { if (intakeData) fetchQuotes(intakeData) }}
             disabled={isLoading}
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
@@ -313,7 +313,7 @@ export function CarrierResults({
                 key={quote.carrier.id}
                 quote={quote}
                 isSelected={selectedCarrierIds.has(quote.carrier.id)}
-                onToggleSelection={onToggleSelection}
+                onToggleSelection={toggleCarrierSelection}
                 onViewDetails={onViewDetails}
               />
             ))}
@@ -350,7 +350,7 @@ export function CarrierResults({
                   key={quote.carrier.id}
                   quote={quote}
                   isSelected={selectedCarrierIds.has(quote.carrier.id)}
-                  onToggleSelection={onToggleSelection}
+                  onToggleSelection={toggleCarrierSelection}
                   onViewDetails={onViewDetails}
                   compact
                 />
