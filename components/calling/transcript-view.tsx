@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useMemo, useCallback } from "react"
 import { ArrowDown, Copy, MessageSquare, Mic } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useCallStore } from "@/lib/store/call-store"
+import { useCoachingInterval } from "@/hooks/use-coaching-interval"
 import { TranscriptEntryBubble } from "./transcript-entry"
 import { CoachingHintCard } from "./coaching-hint-card"
 import type { TranscriptEntry, CoachingHint } from "@/lib/types/call"
@@ -27,6 +28,8 @@ interface TranscriptViewProps {
 }
 
 export function TranscriptView({ isPostCall, onReturnToChat }: TranscriptViewProps) {
+  useCoachingInterval()
+
   const transcript = useCallStore((s) => s.transcript)
   const coachingHints = useCallStore((s) => s.coachingHints)
   const callState = useCallStore((s) => s.callState)

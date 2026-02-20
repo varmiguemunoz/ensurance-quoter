@@ -74,6 +74,7 @@ npx shadcn@latest add <component>    # Add new component
 │   │   ├── chat/route.ts         # POST — streaming AI chat (GPT-4o-mini)
 │   │   ├── chat/proactive/route.ts # POST — proactive insight cards
 │   │   ├── enrichment/route.ts   # POST — PDL person enrichment
+│   │   ├── coaching/route.ts      # POST — real-time AI coaching hints (GPT-4o-mini)
 │   │   └── transcribe/
 │   │       ├── stream/route.ts  # GET — SSE stream (Deepgram live transcription)
 │   │       └── audio/route.ts   # POST — forward base64 PCM to Deepgram
@@ -112,14 +113,17 @@ npx shadcn@latest add <component>    # Add new component
 │   │   ├── match-scoring.ts      # PERMANENT — proprietary scoring algorithm
 │   │   └── eligibility.ts        # PERMANENT — state/medical/DUI checks
 │   ├── ai/
-│   │   └── system-prompt.ts      # buildSystemPrompt() for AI chat
+│   │   ├── system-prompt.ts      # buildSystemPrompt() for AI chat
+│   │   ├── coaching-context.ts   # Condensed carrier intelligence for coaching prompts
+│   │   └── call-coach.ts         # Coaching prompt builder, parser, deduplication
 │   ├── deepgram/
 │   │   ├── sessions.ts           # Deepgram WS session manager (Map-based, max 10)
 │   │   └── stream.ts             # Client-side: SSE + audio POST + call-store dispatch
 │   └── utils.ts                  # cn() helper
 │
 ├── hooks/
-│   └── use-mobile.ts             # useIsMobile() hook
+│   ├── use-mobile.ts             # useIsMobile() hook
+│   └── use-coaching-interval.ts  # 30s coaching hint interval during active calls
 │
 ├── styles/
 │   └── globals.css               # Tailwind v4 theme (DO NOT MODIFY)
