@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an **ensurance-quoter** application built with Next.js 16.1.6 (App Router), TypeScript, and Tailwind CSS v4. The project uses a comprehensive shadcn/ui component library with 56+ pre-built accessible components.
+**Ensurance** is a term life insurance agent command center — quoting, lead management, enrichment, and AI assistance in one platform. Agents upload lead lists, enrich prospects with People Data Labs, get instant carrier quotes with underwriting intelligence, and (soon) call leads via Telnyx — all from a three-column resizable interface.
+
+**Not just a quoting tool** — the competitive moat is the carrier intelligence layer (tobacco rules, medical conditions, DUI policies, state availability) that no other platform surfaces to agents.
 
 ## Technology Stack
 
@@ -14,7 +16,16 @@ This is an **ensurance-quoter** application built with Next.js 16.1.6 (App Route
 - **UI Components**: shadcn/ui (New York style, 56 components installed)
 - **Forms**: React Hook Form + Zod validation
 - **Icons**: Lucide React
+- **Charts**: Recharts 2.15
+- **Toast**: Sonner 2.0
+- **AI**: Vercel AI SDK + OpenAI GPT-4o-mini (streaming chat + proactive insights)
+- **Enrichment**: People Data Labs API (80+ field person enrichment)
 - **Runtime**: Bun (package manager)
+
+### Planned (Phase 1 — not yet installed)
+- **State Management**: Zustand (lead store, UI store)
+- **Database**: Supabase (PostgreSQL with RLS)
+- **CSV Parsing**: PapaParse
 
 ## Development Commands
 
@@ -28,10 +39,15 @@ bun start                 # Start production server
 
 # Code quality
 bun run lint              # Run ESLint
+bunx tsc --noEmit         # Type check (run after every change)
 
 # shadcn/ui component management
 npx shadcn@latest add <component>    # Add new component
-npx shadcn@latest add --all          # Add all components
+
+# Supabase (Phase 1 — not yet installed)
+# bunx supabase link         # Link to Supabase project
+# bunx supabase db push      # Apply migrations
+# bunx supabase migration new <name>   # Create new migration
 ```
 
 ## Project Architecture
@@ -41,342 +57,238 @@ npx shadcn@latest add --all          # Add all components
 ```
 /
 ├── app/                          # Next.js App Router
-│   ├── auth/                     # Authentication routes
-│   │   ├── login/                # Login page
-│   │   ├── register/             # Registration page
-│   │   ├── confirm/              # Email confirmation
-│   │   └── password/             # Password reset flows
-│   ├── dashboard/                # Protected dashboard routes
-│   │   ├── profile/              # User profile
-│   │   └── payment/              # Payment flows (success, cancel)
-│   ├── layout.tsx                # Root layout with fonts
-│   └── page.tsx                  # Homepage
-├── components/ui/                # shadcn/ui components (56 total)
-├── lib/                          # Utility functions
-│   └── utils.ts                  # cn() helper for className merging
-├── hooks/                        # Custom React hooks
+│   ├── auth/                     # Authentication routes (UI only, no auth logic yet)
+│   │   ├── login/
+│   │   ├── register/
+│   │   ├── confirm/
+│   │   └── password/
+│   ├── dashboard/                # Dashboard routes (legacy prototype)
+│   │   ├── profile/
+│   │   └── payment/
+│   ├── quote/                    # Quick quote engine (anonymous, no lead context)
+│   │   ├── page.tsx
+│   │   └── quote-page-client.tsx
+│   ├── api/
+│   │   ├── quote/route.ts        # POST — eligibility + pricing + scoring
+│   │   ├── chat/route.ts         # POST — streaming AI chat (GPT-4o-mini)
+│   │   ├── chat/proactive/route.ts # POST — proactive insight cards
+│   │   └── enrichment/route.ts   # POST — PDL person enrichment
+│   ├── layout.tsx                # Root layout (Inter + Geist Mono)
+│   └── page.tsx                  # Marketing landing page
+│
+├── components/
+│   ├── ui/                       # shadcn/ui (56 components — DO NOT MODIFY)
+│   ├── quote/                    # Quote engine components
+│   │   ├── intake-form.tsx       # Left column: client info intake
+│   │   ├── carrier-results.tsx   # Center column: Best Matches + All Carriers
+│   │   ├── carrier-detail-modal.tsx  # Three-tab dialog: Overview, Underwriting, Carrier Info
+│   │   ├── carrier-comparison.tsx    # Side-by-side comparison sheet (2-3 carriers)
+│   │   ├── ai-assistant-panel.tsx    # Right column: streaming chat + proactive insights
+│   │   ├── lead-enrichment-popover.tsx # PDL lookup + results dialog
+│   │   └── medical-history-section.tsx # Conditions combobox, medications, DUI toggle
+│   ├── landing/                  # Marketing page components (atoms, molecules, organisms, templates)
+│   ├── auth/                     # Auth form components
+│   ├── atoms/                    # Shared atomic components
+│   ├── molecules/                # Shared molecule components
+│   ├── organisms/                # Dashboard/legacy organisms
+│   └── templates/                # Page layout templates
+│
+├── lib/
+│   ├── types/
+│   │   ├── carrier.ts            # Carrier, Product, TobaccoRules, DUIRule
+│   │   ├── quote.ts              # QuoteRequest, CarrierQuote, QuoteResponse
+│   │   ├── ai.ts                 # EnrichmentResult, ProactiveInsight, AutoFillData
+│   │   └── index.ts              # Barrel exports
+│   ├── data/
+│   │   ├── carriers.ts           # 11 carriers with real intelligence data
+│   │   ├── medical-conditions.ts # 18 searchable conditions
+│   │   └── carrier-intelligence-summary.ts  # Text for AI system prompt
+│   ├── engine/
+│   │   ├── mock-pricing.ts       # TEMPORARY — replaced by Compulife API later
+│   │   ├── match-scoring.ts      # PERMANENT — proprietary scoring algorithm
+│   │   └── eligibility.ts        # PERMANENT — state/medical/DUI checks
+│   ├── ai/
+│   │   └── system-prompt.ts      # buildSystemPrompt() for AI chat
+│   └── utils.ts                  # cn() helper
+│
+├── hooks/
+│   └── use-mobile.ts             # useIsMobile() hook
+│
 ├── styles/
-│   └── globals.css               # Tailwind + shadcn theme config
-└── GLOBAL_RULES.md               # Comprehensive design guidelines
+│   └── globals.css               # Tailwind v4 theme (DO NOT MODIFY)
+│
+├── CLAUDE.md                     # ← THIS FILE
+├── GLOBAL_RULES.md               # Design system rules (read before UI changes)
+├── PROJECT_SCOPE.md              # Project phases, goals, risks
+├── LEARNINGS.md                  # Auto-populated by task execution
+├── ERRORS/                       # Task failure dumps (auto-created)
+└── TASKS/                        # Phase 1 task specs (8 tasks)
+```
+
+### Planned Directories (Phase 1 — not yet created)
+```
+app/leads/                        # Lead CRM routes
+components/leads/                 # Lead CRM components
+components/navigation/            # Shared navigation
+lib/store/                        # Zustand stores (lead-store, ui-store)
+lib/supabase/                     # Supabase clients + data access
+lib/types/lead.ts                 # Lead type
+lib/types/database.ts             # Supabase table types
+lib/utils/csv-parser.ts           # CSV parsing utilities
+supabase/migrations/              # Database migrations
+DATA_REFERENCE.md                 # Carrier intelligence data reference
+CONVERSATION_INDEX.md             # Past conversation summaries
 ```
 
 ### Key Architectural Decisions
 
 1. **App Router Over Pages Router**: All routes use Next.js App Router (app/ directory)
-2. **shadcn/ui Philosophy**: Components are copied into the project (not npm packages), allowing full customization
-3. **Tailwind CSS v4**: Uses new @theme inline syntax with OKLCH color space for better color accuracy
+2. **shadcn/ui Philosophy**: Components copied into project, allowing full customization
+3. **Tailwind CSS v4**: @theme inline syntax with OKLCH color space
 4. **Path Aliases**: `@/*` maps to root, configured in tsconfig.json
+5. **Quote Logic is Deterministic**: No AI/ML for premium calculations — if/else blocks and database lookups only. Legal liability requires this.
+6. **Lead as First-Class Entity**: All data (enrichment, quotes, calls) attaches to a Lead record. The Lead type composes existing types.
+7. **Zustand for State**: Two stores: LeadStore (data) and UIStore (panels, views). Replaces scattered useState.
+8. **Supabase for Persistence**: PostgreSQL with RLS. Tables: leads, enrichments, quotes, call_logs.
+9. **Dual Entry Points**: `/leads/[id]` for lead-centric workflow (persistent), `/quote` for quick anonymous quoting (ephemeral).
+10. **Agent Controls the Flow**: No auto-quoting, no auto-calling. Enrichment auto-fills, agent reviews and triggers.
+
+## Quote Engine
+
+### Pipeline
+```
+IntakeForm → QuoteRequest → POST /api/quote → For each carrier:
+  1. checkEligibility(carrier, age, state, coverage, term, dui)
+  2. calculatePremium(carrier, age, gender, coverage, term, tobacco)
+  3. calculateMatchScore(carrier, medical, tobacco, priceRank)
+→ QuoteResponse { eligible: CarrierQuote[], ineligible: [] }
+```
+
+### Carrier Intelligence (11 carriers with full data)
+| ID | Carrier | AM Best | Key Differentiator |
+|---|---|---|---|
+| amam | American Amicable | A- | Broad SI product line, 36-mo tobacco lookback |
+| foresters | Foresters Financial | A | ★ Vaping = non-smoker rates (only carrier) |
+| moo | Mutual of Omaha | A+ | Strong brand, wide state availability |
+| jh | John Hancock | A+ | ★ Most lenient nicotine (ZYN, smokeless, marijuana) |
+| lga | LGA / Banner Life | A+ | FUW, highest face amounts ($2M), lowest rates |
+| sbli | SBLI | A | All states, 6 rate classes, digital-first |
+| nlg | NLG/LSW | A | BMI-based rate classes, IUL products |
+| transamerica | Transamerica | A | Unique DUI flat-extra schedule |
+| americo | Americo | A | DocuSign only, Eagle Premier telesales |
+| uhl | United Home Life | A- | DLX product uniquely accepts DUI |
+| fg | F&G Fidelity & Guaranty | A- | IUL-only carrier |
+
+### Pricing
+Currently **mock pricing** (formula-based). Replaced by **Compulife API** ($480/yr) when access is secured.
+
+### Match Scoring
+Proprietary 0-99 scale. Factors: AM Best rating, e-sign capability, vape-friendly bonus, price rank, medical condition acceptance, state eligibility.
+
+## AI Assistant Panel
+
+- **Streaming chat** via Vercel AI SDK → OpenAI GPT-4o-mini
+- **System prompt** includes carrier intelligence + client profile + quote results
+- **Proactive insights**: auto-generated cards when intake/quotes change (2s debounce)
+- **Enrichment trigger**: PDL lookup from the panel header
+
+## PDL Enrichment
+
+- 80+ fields across 10 categories (identity, location, employment, income, career, education, skills, contact, social, metadata)
+- Auto-fills intake: age, gender, state (Phase 1 expands to name + more fields)
+- Age estimation fallback if birth_year gated on PDL free tier
+
+## Environment Variables
+
+```bash
+# .env.local (currently configured)
+OPENAI_API_KEY=                      # GPT-4o-mini for AI chat + proactive insights
+PEOPLEDATALABS_API_KEY=              # PDL person enrichment
+
+# Phase 1 — add when Supabase is set up
+# NEXT_PUBLIC_SUPABASE_URL=          # Supabase project URL
+# NEXT_PUBLIC_SUPABASE_ANON_KEY=     # Supabase anonymous key
+# SUPABASE_SERVICE_ROLE_KEY=         # Supabase service key (server-side only)
+```
+
+## Current Phase
+
+**Phase 1: Lead CRM Foundation** (8 tasks in TASKS/)
+
+### Built ✅
+- Marketing landing page
+- Auth UI (login, register, confirm, password reset) — no auth logic yet
+- Quote engine: intake, eligibility, mock pricing, match scoring, two-tier carrier display
+- Carrier detail modal (3 tabs), side-by-side comparison (2-3 carriers)
+- AI assistant panel: streaming chat, proactive insights, enrichment trigger
+- PDL enrichment: 80+ fields, accordion display, auto-fill bridge
+- Medical history: 18 conditions combobox, DUI toggle
+- 11 carriers with real intelligence data
+
+### Building Now (Phase 1) 🔨
+- Supabase schema (leads, quotes, enrichments, call_logs)
+- Lead type + Zustand stores
+- CSV upload with column mapping
+- Lead list view (CRM table)
+- Lead detail view (lead → quote engine)
+- Resizable/collapsible three-column panels
+- Enrichment → intake auto-fill pipeline
+- Navigation (/leads, /leads/[id], /quote)
+
+### Upcoming Phases ⏳
+- Phase 2: Enrichment pipeline refinement
+- Phase 3: Telnyx calling (outbound, recording, transcription)
+- Phase 4: Ringba inbound + live AI during calls
+- Phase 5: Compulife real pricing, Supabase Auth, deployment
+
+## Rules
+
+### DO NOT
+- Modify `components/ui/*` — use shadcn components as-is
+- Modify `styles/globals.css` theme
+- Use AI for premium calculations — deterministic if/else only
+- Auto-trigger quotes — agent must click "Get Quotes"
+- Hard-decline carriers for medical conditions — show warnings, let agents decide
+- Install new dependencies without asking
+- Break the `/quote` route — it's the quick-quote fallback and demo route
+
+### ALWAYS
+- Run `bunx tsc --noEmit` after every change
+- Persist lead data to Supabase — never lose data on refresh
+- Track "dirty" fields — enrichment must not overwrite manual edits
+- Read `GLOBAL_RULES.md` before UI changes
+- Follow mobile-first responsive (Tailwind breakpoints)
 
 ## Design System
 
 ### Color System (OKLCH)
-
-The project uses OKLCH color space (more perceptually uniform than HSL):
-
 ```css
-/* Light mode */
---primary: oklch(0.205 0 0);          /* Near black */
---background: oklch(1 0 0);            /* White */
-
-/* Dark mode */
---primary: oklch(0.922 0 0);           /* Near white */
---background: oklch(0.145 0 0);        /* Dark gray */
+--primary: oklch(0.205 0 0);     /* Light: near black */
+--background: oklch(1 0 0);       /* Light: white */
+--primary: oklch(0.922 0 0);     /* Dark: near white */
+--background: oklch(0.145 0 0);  /* Dark: dark gray */
 ```
 
-### Component Import Pattern
-
+### Imports
 ```typescript
-// UI components (from shadcn/ui)
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-
-// Utilities
 import { cn } from "@/lib/utils"
 ```
 
-### Form Validation Pattern
+## Branch Strategy
 
-All forms use React Hook Form + Zod:
-
-```typescript
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-
-const formSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-})
-
-const form = useForm({
-  resolver: zodResolver(formSchema),
-  defaultValues: { email: "", password: "" },
-})
-```
-
-## Important Patterns
-
-### Client Components
-
-Most interactive components require `"use client"` directive:
-
-```typescript
-"use client"
-
-import { Button } from "@/components/ui/button"
-import { useState } from "react"
-
-export function InteractiveComponent() {
-  const [count, setCount] = useState(0)
-  return <Button onClick={() => setCount(count + 1)}>{count}</Button>
-}
-```
-
-### Server Components (Default)
-
-Pages are Server Components by default. Keep data fetching here:
-
-```typescript
-// app/dashboard/page.tsx - Server Component
-export default async function DashboardPage() {
-  const data = await fetchData() // Server-side only
-  return <DashboardClient data={data} />
-}
-```
-
-### Metadata Pattern
-
-```typescript
-import type { Metadata } from "next"
-
-export const metadata: Metadata = {
-  title: "Page Title",
-  description: "Page description",
-}
-```
-
-## shadcn/ui Integration
-
-### Available Components (56 installed)
-
-The project has all major shadcn/ui components installed:
-
-- **Forms**: Button, Input, Textarea, Select, Checkbox, Radio, Switch, Calendar, Date Picker, OTP Input
-- **Overlays**: Dialog, Sheet, Drawer, Popover, Hover Card, Tooltip, Command
-- **Navigation**: Tabs, Accordion, Menubar, Navigation Menu, Breadcrumb
-- **Data Display**: Card, Table, Alert, Badge, Avatar, Progress, Chart (Recharts)
-- **Feedback**: Toast (Sonner), Alert Dialog, Empty State
-- **Layout**: Resizable Panels, Scroll Area, Aspect Ratio
-
-### Component Customization
-
-Components live in `components/ui/` and can be modified directly:
-
-```typescript
-// components/ui/button.tsx
-const buttonVariants = cva(
-  "base-classes",
-  {
-    variants: {
-      variant: {
-        default: "...",
-        // Add custom variants here
-        custom: "bg-gradient-to-r from-purple-500 to-pink-500"
-      }
-    }
-  }
-)
-```
-
-### Form with shadcn/ui
-
-```typescript
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-
-<Form {...form}>
-  <form onSubmit={form.handleSubmit(onSubmit)}>
-    <FormField
-      control={form.control}
-      name="email"
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>Email</FormLabel>
-          <FormControl>
-            <Input type="email" {...field} />
-          </FormControl>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
-  </form>
-</Form>
-```
-
-## Tailwind CSS v4 Specifics
-
-### Theme Configuration
-
-Theme is defined using `@theme inline` in `styles/globals.css`:
-
-```css
-@theme inline {
-  --color-primary: var(--primary);
-  --radius-lg: var(--radius);
-}
-```
-
-### Custom Variant for Dark Mode
-
-```css
-@custom-variant dark (&:is(.dark *));
-```
-
-### Using CSS Variables
-
-```typescript
-// Reference theme values in components
-className="bg-background text-foreground border-border"
-```
-
-## Global Design Guidelines
-
-This project follows strict design guidelines documented in `GLOBAL_RULES.md` (1975 lines):
-
-1. **Mobile-First Responsive Design**: All UIs must work on mobile first, then scale up
-2. **Atomic Design System**: Components organized as Atoms → Molecules → Organisms → Templates → Pages
-3. **SEO Optimization**: HTML semantic, metadata, schema.org, Core Web Vitals
-4. **Performance**: Bundle < 200KB, LCP < 2.5s, WebP images mandatory
-5. **Immutability**: Never mutate objects, always create new ones
-6. **TypeScript Strict Mode**: All code must pass strict TypeScript checks
-
-**Critical**: Read `GLOBAL_RULES.md` before making UI changes. It contains detailed requirements for responsive design, component architecture, SEO, and performance.
-
-## Authentication Flow
-
-Routes under `app/auth/`:
-
-- `/auth/login` - User login
-- `/auth/register` - New user registration
-- `/auth/confirm` - Email confirmation
-- `/auth/password` - Password reset request
-- `/auth/password/reset` - Password reset form
-
-Routes under `app/dashboard/` are expected to be protected (auth implementation pending).
-
-## Current State
-
-### Implemented
-- ✅ Next.js 16 App Router setup
-- ✅ TypeScript strict mode configuration
-- ✅ Tailwind CSS v4 with OKLCH colors
-- ✅ 56 shadcn/ui components installed
-- ✅ Form validation setup (React Hook Form + Zod)
-- ✅ Route structure (auth, dashboard)
-
-### Pending Implementation
-- ⏳ Authentication logic (routes exist but pages are placeholders)
-- ⏳ Dashboard functionality
-- ⏳ Payment integration
-- ⏳ Database integration
-- ⏳ API routes
-
-## Testing
-
-No test files currently exist. When adding tests:
-
-```bash
-# Install test dependencies (not yet configured)
-bun add -D @testing-library/react @testing-library/jest-dom vitest
-
-# Test patterns to follow
-# - Unit tests for utilities (lib/)
-# - Component tests for UI components
-# - Integration tests for forms
-# - E2E tests for critical flows
-```
-
-## Environment Variables
-
-No `.env` file detected. When adding environment variables:
-
-```bash
-# .env.local (create this file)
-NEXT_PUBLIC_API_URL=
-DATABASE_URL=
-```
-
-## Common Tasks
-
-### Adding a New Page
-
-```typescript
-// app/new-page/page.tsx
-import type { Metadata } from "next"
-
-export const metadata: Metadata = {
-  title: "New Page",
-}
-
-export default function NewPage() {
-  return <div>Content</div>
-}
-```
-
-### Adding a New Form
-
-```typescript
-"use client"
-
-import { z } from "zod"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-
-const schema = z.object({
-  name: z.string().min(2),
-})
-
-export function MyForm() {
-  const form = useForm({
-    resolver: zodResolver(schema),
-    defaultValues: { name: "" },
-  })
-
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(console.log)}>
-        <FormField control={form.control} name="name" render={({ field }) => (
-          <FormItem>
-            <FormLabel>Name</FormLabel>
-            <FormControl><Input {...field} /></FormControl>
-            <FormMessage />
-          </FormItem>
-        )} />
-        <Button type="submit">Submit</Button>
-      </form>
-    </Form>
-  )
-}
-```
-
-### Adding a New shadcn/ui Component
-
-```bash
-# Install the component
-npx shadcn@latest add badge
-
-# Import and use
-import { Badge } from "@/components/ui/badge"
-<Badge variant="default">New</Badge>
-```
+- `main` — Miguel's branch, requires PR review
+- `feature/lukas` — Active development branch
 
 ## References
 
-- **Next.js Docs**: https://nextjs.org/docs
-- **shadcn/ui Docs**: https://ui.shadcn.com
-- **Tailwind CSS v4**: https://tailwindcss.com/docs
-- **React Hook Form**: https://react-hook-form.com
-- **Zod**: https://zod.dev
-- **Project Guidelines**: See `GLOBAL_RULES.md` for comprehensive design and development rules
+- **Next.js**: https://nextjs.org/docs
+- **shadcn/ui**: https://ui.shadcn.com
+- **Tailwind v4**: https://tailwindcss.com/docs
+- **Supabase**: https://supabase.com/docs
+- **Zustand**: https://docs.pmnd.rs/zustand
+- **Vercel AI SDK**: https://sdk.vercel.ai/docs
+- **People Data Labs**: https://docs.peopledatalabs.com
+- **Design Rules**: `GLOBAL_RULES.md`
+- **Data Reference**: `DATA_REFERENCE.md`
+- **Project Scope**: `PROJECT_SCOPE.md`

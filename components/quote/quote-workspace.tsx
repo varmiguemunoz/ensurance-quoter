@@ -117,10 +117,12 @@ export function QuoteWorkspace() {
 
   const leftOpen = useUIStore((s) => s.leftPanelOpen)
   const rightOpen = useUIStore((s) => s.rightPanelOpen)
-  const panelSizes = useUIStore((s) => s.panelSizes)
   const setLeftPanelOpen = useUIStore((s) => s.setLeftPanelOpen)
   const setRightPanelOpen = useUIStore((s) => s.setRightPanelOpen)
   const setPanelSizes = useUIStore((s) => s.setPanelSizes)
+
+  // Capture initial sizes as a stable ref so defaultSize never changes
+  const initialSizesRef = useRef(useUIStore.getState().panelSizes)
 
   const leftPanelRef = useRef<PanelImperativeHandle | null>(null)
   const rightPanelRef = useRef<PanelImperativeHandle | null>(null)
@@ -186,15 +188,21 @@ export function QuoteWorkspace() {
       const left = layout["left"]
       const center = layout["center"]
       const right = layout["right"]
-      if (left !== undefined && center !== undefined && right !== undefined) {
-        // Don't persist collapsed sizes — keep the last expanded size
-        const prev = useUIStore.getState().panelSizes
-        setPanelSizes({
-          left: left <= COLLAPSED_SIZE ? prev.left : left,
-          center,
-          right: right <= COLLAPSED_SIZE ? prev.right : right,
-        })
-      }
+      if (left === undefined || center === undefined || right === undefined) return
+
+      // Don't persist collapsed sizes — keep the last expanded size
+      const prev = useUIStore.getState().panelSizes
+      const newLeft = left <= COLLAPSED_SIZE ? prev.left : left
+      const newRight = right <= COLLAPSED_SIZE ? prev.right : right
+
+      // Skip update if values haven't meaningfully changed (prevents infinite loop)
+      if (
+        Math.abs(newLeft - prev.left) < 0.5 &&
+        Math.abs(center - prev.center) < 0.5 &&
+        Math.abs(newRight - prev.right) < 0.5
+      ) return
+
+      setPanelSizes({ left: newLeft, center, right: newRight })
     },
     [setPanelSizes],
   )
@@ -225,7 +233,7 @@ export function QuoteWorkspace() {
         <ResizablePanel
           id="left"
           panelRef={leftPanelRef}
-          defaultSize={panelSizes.left}
+          defaultSize={initialSizesRef.current.left}
           minSize={LEFT_MIN}
           collapsible
           collapsedSize={COLLAPSED_SIZE}
@@ -262,7 +270,7 @@ export function QuoteWorkspace() {
         {/* ── Center Panel: Results ────────────────────────────────── */}
         <ResizablePanel
           id="center"
-          defaultSize={panelSizes.center}
+          defaultSize={initialSizesRef.current.center}
           minSize={CENTER_MIN}
         >
           <main className="h-full overflow-y-auto p-6">
@@ -374,7 +382,7 @@ export function QuoteWorkspace() {
         <ResizablePanel
           id="right"
           panelRef={rightPanelRef}
-          defaultSize={panelSizes.right}
+          defaultSize={initialSizesRef.current.right}
           minSize={RIGHT_MIN}
           collapsible
           collapsedSize={COLLAPSED_SIZE}

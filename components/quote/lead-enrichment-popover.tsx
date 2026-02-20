@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import {
   Search,
   User,
@@ -37,6 +37,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
+import { useLeadStore } from "@/lib/store/lead-store"
 import type { EnrichmentResult, EnrichmentResponse } from "@/lib/types"
 
 /* ------------------------------------------------------------------ */
@@ -100,11 +101,24 @@ export function LeadEnrichmentPopover({
   onAutoFill,
   onSendToChat,
 }: LeadEnrichmentPopoverProps) {
+  const activeLead = useLeadStore((s) => s.activeLead)
+
   const [popoverOpen, setPopoverOpen] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
+
+  // Pre-fill inputs from active lead when popover opens
+  useEffect(() => {
+    if (!popoverOpen || result) return
+    if (!activeLead) return
+
+    const leadName = [activeLead.firstName, activeLead.lastName].filter(Boolean).join(" ")
+    if (leadName && !name) setName(leadName)
+    if (activeLead.email && !email) setEmail(activeLead.email)
+    if (activeLead.phone && !phone) setPhone(activeLead.phone)
+  }, [popoverOpen]) // eslint-disable-line react-hooks/exhaustive-deps
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<EnrichmentResult | null>(null)
   const [error, setError] = useState<string | null>(null)
