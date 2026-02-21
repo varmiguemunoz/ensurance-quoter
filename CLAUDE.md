@@ -75,6 +75,10 @@ npx shadcn@latest add <component>    # Add new component
 │   │   ├── chat/proactive/route.ts # POST — proactive insight cards
 │   │   ├── enrichment/route.ts   # POST — PDL person enrichment
 │   │   ├── coaching/route.ts      # POST — real-time AI coaching hints (GPT-4o-mini)
+│   │   ├── call-summary/route.ts  # POST — 3-sentence AI call summary (GPT-4o-mini)
+│   │   ├── call-log/route.ts      # POST — save call log to Supabase
+│   │   ├── call-log/[leadId]/route.ts  # GET — fetch call logs for a lead
+│   │   ├── call-log/counts/route.ts    # GET — call counts by lead IDs
 │   │   └── transcribe/
 │   │       ├── stream/route.ts  # GET — SSE stream (Deepgram live transcription)
 │   │       └── audio/route.ts   # POST — forward base64 PCM to Deepgram
@@ -91,6 +95,16 @@ npx shadcn@latest add <component>    # Add new component
 │   │   ├── ai-assistant-panel.tsx    # Right column: streaming chat + proactive insights
 │   │   ├── lead-enrichment-popover.tsx # PDL lookup + results dialog
 │   │   └── medical-history-section.tsx # Conditions combobox, medications, DUI toggle
+│   ├── calling/                  # Call lifecycle components
+│   │   ├── call-log-viewer.tsx      # Expandable call history in lead detail
+│   │   ├── transcript-modal.tsx     # Full transcript Sheet with coaching hints
+│   │   ├── transcript-view.tsx      # Live transcript during active calls
+│   │   ├── transcript-entry.tsx     # Individual transcript bubble
+│   │   ├── coaching-hint-card.tsx   # Inline coaching hint card
+│   │   ├── call-mode-header.tsx     # Active call header bar
+│   │   ├── call-button.tsx          # Dial/hangup button
+│   │   ├── active-call-bar.tsx      # Global call status bar
+│   │   └── call-notification-handler.tsx  # Root-level call event handler
 │   ├── landing/                  # Marketing page components (atoms, molecules, organisms, templates)
 │   ├── auth/                     # Auth form components
 │   ├── atoms/                    # Shared atomic components
@@ -119,6 +133,16 @@ npx shadcn@latest add <component>    # Add new component
 │   ├── deepgram/
 │   │   ├── sessions.ts           # Deepgram WS session manager (Map-based, max 10)
 │   │   └── stream.ts             # Client-side: SSE + audio POST + call-store dispatch
+│   ├── telnyx/
+│   │   ├── notification-handler.ts  # Maps TelnyxRTC events to call-store
+│   │   ├── post-call-save.ts        # Post-call: format transcript, AI summary, save to DB
+│   │   ├── active-call.ts           # Active call state + stream accessors
+│   │   ├── audio-capture.ts         # PCM audio capture for transcription
+│   │   └── client.ts                # TelnyxRTC client wrapper
+│   ├── supabase/
+│   │   ├── server.ts             # Server-side Supabase client (service role)
+│   │   ├── leads.ts              # Lead CRUD operations
+│   │   └── calls.ts              # Call log CRUD: saveCallLog, getCallLogs, getCallCounts
 │   └── utils.ts                  # cn() helper
 │
 ├── hooks/

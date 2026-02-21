@@ -8,6 +8,7 @@ import { useCallStore } from "@/lib/store/call-store"
 import { setActiveCall, getLocalStream, getRemoteStream } from "./active-call"
 import type { TelnyxNotification } from "./client"
 import { startTranscription, stopTranscription } from "@/lib/deepgram/stream"
+import { persistCallData } from "./post-call-save"
 import { toast } from "sonner"
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -107,11 +108,14 @@ export function handleTelnyxNotification(
       store.setCallEnding()
       toast.info("Call ended")
       clearHangupTimeout()
-      hangupTimeoutId = setTimeout(() => {
-        hangupTimeoutId = null
-        useCallStore.getState().resetCall()
-        setActiveCall(null)
-      }, 2000)
+      // Persist call data before resetting store
+      void persistCallData().finally(() => {
+        hangupTimeoutId = setTimeout(() => {
+          hangupTimeoutId = null
+          useCallStore.getState().resetCall()
+          setActiveCall(null)
+        }, 500)
+      })
       break
 
     case "destroy":

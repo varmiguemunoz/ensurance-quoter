@@ -1,8 +1,8 @@
 # Task: P2-06-post-call-persistence
 
 ## Status
-- [ ] Pending
-- [ ] In Progress
+- [x] Pending
+- [x] In Progress
 - [ ] Verified
 - [ ] Complete
 

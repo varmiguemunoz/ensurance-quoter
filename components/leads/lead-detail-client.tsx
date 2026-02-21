@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import { UnsavedChangesGuard } from "@/components/navigation/unsaved-changes-guard"
 import { CallButton } from "@/components/calling/call-button"
 import { ActiveCallBar } from "@/components/calling/active-call-bar"
+import { CallLogViewer } from "@/components/calling/call-log-viewer"
 
 interface LeadDetailClientProps {
   leadId: string
@@ -168,6 +169,8 @@ export function LeadDetailClient({ leadId }: LeadDetailClientProps) {
       <ActiveCallBar />
 
       <QuoteWorkspace />
+
+      <CallLogViewer leadId={leadId} />
     </div>
   )
 }

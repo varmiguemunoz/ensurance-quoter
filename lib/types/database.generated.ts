@@ -16,6 +16,8 @@ export type Database = {
     Tables: {
       call_logs: {
         Row: {
+          ai_summary: string | null
+          coaching_hints: Json | null
           direction: string
           duration_seconds: number | null
           ended_at: string | null
@@ -28,6 +30,8 @@ export type Database = {
           transcript_text: string | null
         }
         Insert: {
+          ai_summary?: string | null
+          coaching_hints?: Json | null
           direction: string
           duration_seconds?: number | null
           ended_at?: string | null
@@ -40,6 +44,8 @@ export type Database = {
           transcript_text?: string | null
         }
         Update: {
+          ai_summary?: string | null
+          coaching_hints?: Json | null
           direction?: string
           duration_seconds?: number | null
           ended_at?: string | null

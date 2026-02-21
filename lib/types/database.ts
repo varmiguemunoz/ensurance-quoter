@@ -74,8 +74,17 @@ export interface CallLogRow {
   duration_seconds: number | null
   recording_url: string | null
   transcript_text: string | null
+  ai_summary: string | null
+  coaching_hints: CoachingHintJson[] | null
   started_at: string | null
   ended_at: string | null
+}
+
+export interface CoachingHintJson {
+  type: string
+  text: string
+  timestamp: number
+  relatedCarriers: string[]
 }
 
 /* ------------------------------------------------------------------ */
@@ -124,6 +133,8 @@ export interface CallLogInsert {
   duration_seconds?: number | null
   recording_url?: string | null
   transcript_text?: string | null
+  ai_summary?: string | null
+  coaching_hints?: CoachingHintJson[] | null
   started_at?: string | null
   ended_at?: string | null
 }

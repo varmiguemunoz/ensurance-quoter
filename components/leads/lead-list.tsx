@@ -12,6 +12,7 @@ import {
   Users,
   Loader2,
   AlertCircle,
+  Phone,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -153,10 +154,26 @@ export function LeadList() {
   const hydrateLeads = useLeadStore((s) => s.hydrateLeads)
   const router = useRouter()
 
+  const [callCounts, setCallCounts] = useState<Record<string, number>>({})
+
   // Hydrate leads from Supabase on mount
   useEffect(() => {
     void hydrateLeads(DEV_AGENT_ID)
   }, [hydrateLeads])
+
+  // Fetch call counts when leads change
+  useEffect(() => {
+    if (leads.length === 0) return
+    const ids = leads.map((l) => l.id).join(",")
+    void fetch(`/api/call-log/counts?leadIds=${ids}`)
+      .then((r) => r.json())
+      .then((data: { counts?: Record<string, number> }) => {
+        if (data.counts) setCallCounts(data.counts)
+      })
+      .catch(() => {
+        // Non-critical — badge just won't show
+      })
+  }, [leads])
 
   const [search, setSearch] = useState("")
   const [sourceFilter, setSourceFilter] = useState<LeadSource | "all">("all")
@@ -366,6 +383,7 @@ export function LeadList() {
               />
               <TableHead className="text-center">Enriched</TableHead>
               <TableHead className="text-center">Quoted</TableHead>
+              <TableHead className="text-center">Calls</TableHead>
               <SortHeader
                 label="Created"
                 sortKey="createdAt"
@@ -379,7 +397,7 @@ export function LeadList() {
             {filteredLeads.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={9}
                   className="h-24 text-center text-muted-foreground"
                 >
                   No leads match your filters.
@@ -410,6 +428,16 @@ export function LeadList() {
                   </TableCell>
                   <TableCell className="text-center">
                     <StatusIcon active={lead.quoteHistory.length > 0} />
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {(callCounts[lead.id] ?? 0) > 0 ? (
+                      <Badge variant="secondary" className="gap-1 text-[10px]">
+                        <Phone className="h-3 w-3" />
+                        {callCounts[lead.id]}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground/40">—</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {formatDate(lead.createdAt)}

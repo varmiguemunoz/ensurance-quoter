@@ -72,6 +72,8 @@ export interface CallLogEntry {
   durationSeconds: number | null
   recordingUrl: string | null
   transcriptText: string | null
+  aiSummary: string | null
+  coachingHints: CoachingHint[] | null
   startedAt: string | null
   endedAt: string | null
 }
