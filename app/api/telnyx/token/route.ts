@@ -9,7 +9,7 @@ import { z } from "zod"
 /* ------------------------------------------------------------------ */
 
 const RequestSchema = z.object({
-  leadId: z.string().uuid(),
+  leadId: z.string().uuid().optional(),
 })
 
 // TODO(P5): Add auth check — this endpoint grants telephony access (real cost per call)
@@ -25,14 +25,14 @@ export async function POST(request: Request) {
     )
   }
 
-  // Validate request body
+  // Validate request body (leadId optional — omitted for persistent inbound connection)
   let body: z.infer<typeof RequestSchema>
   try {
     const raw = await request.json()
     body = RequestSchema.parse(raw)
   } catch {
     return NextResponse.json(
-      { error: "Invalid request — leadId (UUID) required" },
+      { error: "Invalid request body" },
       { status: 400 },
     )
   }
