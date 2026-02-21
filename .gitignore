@@ -36,6 +36,13 @@ yarn-error.log*
 # vercel
 .vercel
 
+# claude code (contains MCP tokens)
+.claude/mcp.json
+.mcp.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# reference repos (cloned for study, not committed)
+docs/references/
