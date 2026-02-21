@@ -102,6 +102,8 @@ npx shadcn@latest add <component>    # Add new component
 │   │   ├── transcript-entry.tsx     # Individual transcript bubble
 │   │   ├── coaching-hint-card.tsx   # Inline coaching hint card
 │   │   ├── call-mode-header.tsx     # Active call header bar
+│   │   ├── incoming-call-banner.tsx  # Fixed-top inbound call accept/decline banner
+│   │   ├── ring-sound.tsx           # Web Audio ring tone for inbound calls
 │   │   ├── call-button.tsx          # Dial/hangup button
 │   │   ├── active-call-bar.tsx      # Global call status bar
 │   │   └── call-notification-handler.tsx  # Root-level call event handler
@@ -135,6 +137,7 @@ npx shadcn@latest add <component>    # Add new component
 │   │   └── stream.ts             # Client-side: SSE + audio POST + call-store dispatch
 │   ├── telnyx/
 │   │   ├── notification-handler.ts  # Maps TelnyxRTC events to call-store
+│   │   ├── inbound-handler.ts       # Accept/decline inbound calls
 │   │   ├── post-call-save.ts        # Post-call: format transcript, AI summary, save to DB
 │   │   ├── active-call.ts           # Active call state + stream accessors
 │   │   ├── audio-capture.ts         # PCM audio capture for transcription

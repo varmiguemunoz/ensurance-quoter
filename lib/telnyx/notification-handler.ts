@@ -9,6 +9,7 @@ import { setActiveCall, getLocalStream, getRemoteStream } from "./active-call"
 import type { TelnyxNotification } from "./client"
 import { startTranscription, stopTranscription } from "@/lib/deepgram/stream"
 import { persistCallData } from "./post-call-save"
+import { handleInboundCall } from "./inbound-handler"
 import { toast } from "sonner"
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -71,13 +72,25 @@ export function handleTelnyxNotification(
   switch (telnyxState) {
     case "new":
     case "requesting":
-    case "trying":
-      // Pre-connection states — callConnecting was already set by CallButton
+    case "trying": {
+      // For outbound: callConnecting was already set by CallButton — no-op.
+      // For inbound: these can precede "ringing", so detect and route early.
+      const dir = (call.direction ?? call.options?.direction) as string | undefined
+      if (dir === "inbound" && store.callState === "idle") {
+        handleInboundCall(call, callId)
+      }
       break
+    }
 
-    case "ringing":
-      store.setCallRinging(callId)
+    case "ringing": {
+      const direction = (call.direction ?? call.options?.direction) as string | undefined
+      if (direction === "inbound" && store.callState === "idle") {
+        handleInboundCall(call, callId)
+      } else {
+        store.setCallRinging(callId)
+      }
       break
+    }
 
     case "early":
     case "answering":

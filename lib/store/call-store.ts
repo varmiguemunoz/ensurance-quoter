@@ -20,6 +20,7 @@ interface CallStoreState {
   callState: CallState
   callDirection: "inbound" | "outbound" | null
   destinationNumber: string | null
+  inboundCallerNumber: string | null
   callStartedAt: number | null
   callDuration: number
 
@@ -43,6 +44,7 @@ interface CallStoreActions {
   // Call lifecycle
   setCallConnecting: (leadId: string, destination: string) => void
   setCallRinging: (callId: string) => void
+  setInboundRinging: (callId: string, callerNumber: string) => void
   setCallActive: (callId: string) => void
   setCallHeld: () => void
   setCallUnheld: () => void
@@ -87,6 +89,7 @@ const INITIAL_STATE: CallStoreState = {
   callState: "idle",
   callDirection: null,
   destinationNumber: null,
+  inboundCallerNumber: null,
   callStartedAt: null,
   callDuration: 0,
   isMuted: false,
@@ -130,6 +133,17 @@ export const useCallStore = create<CallStore>()((set, get) => ({
       activeCallId: callId,
     }),
 
+  setInboundRinging: (callId, callerNumber) =>
+    set({
+      callState: "ringing",
+      activeCallId: callId,
+      callDirection: "inbound",
+      inboundCallerNumber: callerNumber,
+      error: null,
+      transcript: [],
+      coachingHints: [],
+    }),
+
   setCallActive: (callId) =>
     set({
       callState: "active",
@@ -151,6 +165,7 @@ export const useCallStore = create<CallStore>()((set, get) => ({
       callState: "idle",
       callDirection: null,
       destinationNumber: null,
+      inboundCallerNumber: null,
       callStartedAt: null,
       callDuration: 0,
       isMuted: false,

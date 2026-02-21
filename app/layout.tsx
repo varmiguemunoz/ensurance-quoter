@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { CallNotificationHandler } from "@/components/calling/call-notification-handler";
+import { IncomingCallBanner } from "@/components/calling/incoming-call-banner";
 import "@/styles/globals.css";
 
 const inter = Inter({
@@ -38,6 +39,7 @@ export default function RootLayout({
         className={`${inter.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        <IncomingCallBanner />
         <CallNotificationHandler />
         <Toaster position="bottom-right" theme="light" />
       </body>
